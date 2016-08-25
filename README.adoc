@@ -1,6 +1,12 @@
 = vertx-infinispan
 
-A Vert.x cluster manager implementation based on Infinispan and JGroups
+A Vert.x cluster manager implementation based on Infinispan and JGroups.
+
+== Goal
+
+This cluster manager is inspired by the https://github.com/vert-x3/vertx-jgroups/[JGroups cluster manager].
+
+The major difference is that it does not use raw JGroups services for distributed maps, where Infinispan really shines.
 
 == Using
 
