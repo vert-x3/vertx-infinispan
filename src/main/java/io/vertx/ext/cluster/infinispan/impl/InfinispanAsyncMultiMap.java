@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -98,10 +99,11 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
   private class ChoosableIterableImpl implements ChoosableIterable<V> {
     private final Object kk;
-    private volatile int idx;
+    private final AtomicInteger idx;
 
     ChoosableIterableImpl(K k) {
       this.kk = DataConverter.toCachedObject(k);
+      idx = new AtomicInteger();
     }
 
     @Override
@@ -112,7 +114,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     @Override
     public V choose() {
       List<V> list = getList();
-      return list.get(mod(idx++, list.size()));
+      return list.get(mod(idx.getAndIncrement(), list.size()));
     }
 
     private int mod(int idx, int size) {
