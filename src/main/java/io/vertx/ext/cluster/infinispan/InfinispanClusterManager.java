@@ -34,12 +34,6 @@ import io.vertx.ext.cluster.infinispan.impl.JGroupsLock;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsLogFactory;
 import io.vertx.ext.cluster.infinispan.impl.MultiMapKey;
 import org.infinispan.Cache;
-import org.infinispan.configuration.cache.CacheMode;
-import org.infinispan.configuration.cache.Configuration;
-import org.infinispan.configuration.cache.ConfigurationBuilder;
-import org.infinispan.configuration.global.GlobalConfiguration;
-import org.infinispan.configuration.global.GlobalConfigurationBuilder;
-import org.infinispan.eviction.EvictionStrategy;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
@@ -50,6 +44,7 @@ import org.jgroups.Global;
 import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -70,10 +65,9 @@ public class InfinispanClusterManager implements ClusterManager {
     }
   }
 
-  private static final String CLUSTER_MAP_NAME = "__vertx.haInfo";
-  private static final String SUBS_MAP_NAME = "__vertx.subs";
+  private static final String CONFIG_TEMPLATE = "__vertx.distributed.cache.config";
 
-  private final GlobalConfiguration globalConfiguration;
+  private final String configPath;
 
   private Vertx vertx;
   private DefaultCacheManager cacheManager;
@@ -83,24 +77,12 @@ public class InfinispanClusterManager implements ClusterManager {
   private volatile boolean active;
 
   public InfinispanClusterManager() {
-    this.globalConfiguration = createGlobalConfiguration(null).build();
+    this.configPath = "infinispan.xml";
   }
 
-  public InfinispanClusterManager(String jgroupsConfig) {
-    Objects.requireNonNull(jgroupsConfig, "jgroupsConfig");
-    this.globalConfiguration = createGlobalConfiguration(jgroupsConfig).build();
-  }
-
-  public InfinispanClusterManager(GlobalConfiguration globalConfiguration) {
-    Objects.requireNonNull(globalConfiguration, "globalConfiguration");
-    this.globalConfiguration = globalConfiguration;
-  }
-
-  public static GlobalConfigurationBuilder createGlobalConfiguration(String jgroupsConfig) {
-    GlobalConfigurationBuilder globalConfigurationBuilder = GlobalConfigurationBuilder.defaultClusteredBuilder();
-    globalConfigurationBuilder.transport().defaultTransport()
-      .addProperty("configurationFile", jgroupsConfig == null ? "vert.x-jgroups.xml" : jgroupsConfig);
-    return globalConfigurationBuilder;
+  public InfinispanClusterManager(String configPath) {
+    Objects.requireNonNull(configPath, "configPath");
+    this.configPath = configPath;
   }
 
   @Override
@@ -111,8 +93,7 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
-      defineConfigurationIfNeeded(name);
-      Cache<MultiMapKey<Object, Object>, String> cache = cacheManager.getCache(name);
+      Cache<MultiMapKey<Object, Object>, String> cache = cacheManager.getCache(name, CONFIG_TEMPLATE);
       future.complete(new InfinispanAsyncMultiMap<>(vertx, cache));
     }, false, resultHandler);
   }
@@ -120,37 +101,14 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMap(String name, Handler<AsyncResult<AsyncMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
-      defineConfigurationIfNeeded(name);
-      Cache<Object, Object> cache = cacheManager.getCache(name);
+      Cache<Object, Object> cache = cacheManager.getCache(name, CONFIG_TEMPLATE);
       future.complete(new InfinispanAsyncMap<>(vertx, cache));
     }, false, resultHandler);
   }
 
   @Override
   public <K, V> Map<K, V> getSyncMap(String name) {
-    defineConfigurationIfNeeded(name);
-    return cacheManager.getCache(name);
-  }
-
-  private void defineConfigurationIfNeeded(String name) {
-    if (cacheManager.getCacheConfiguration(name) != null) {
-      return;
-    }
-    ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
-    switch (name) {
-      case SUBS_MAP_NAME:
-      case CLUSTER_MAP_NAME:
-        configurationBuilder.clustering().cacheMode(CacheMode.REPL_SYNC);
-        break;
-      default:
-        configurationBuilder.clustering().cacheMode(CacheMode.DIST_SYNC);
-
-    }
-    Configuration configuration = configurationBuilder
-      .eviction().strategy(EvictionStrategy.NONE)
-      .expiration().wakeUpInterval(-1)
-      .build();
-    cacheManager.defineConfiguration(name, configuration);
+    return cacheManager.getCache(name, CONFIG_TEMPLATE);
   }
 
   @Override
@@ -200,7 +158,11 @@ public class InfinispanClusterManager implements ClusterManager {
         return;
       }
       active = true;
-      cacheManager = new DefaultCacheManager(globalConfiguration);
+      try {
+        cacheManager = new DefaultCacheManager(configPath);
+      } catch (IOException e) {
+        future.fail(e);
+      }
       cacheManager.addListener(new ClusterViewListener());
       JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
       counterService = new CounterService(transport.getChannel());

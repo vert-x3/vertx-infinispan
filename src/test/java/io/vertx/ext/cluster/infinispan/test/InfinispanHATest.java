@@ -19,7 +19,6 @@ package io.vertx.ext.cluster.infinispan.test;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.test.core.HATest;
-import org.infinispan.configuration.global.GlobalConfiguration;
 
 /**
  * @author Thomas Segismont
@@ -27,8 +26,6 @@ import org.infinispan.configuration.global.GlobalConfiguration;
 public class InfinispanHATest extends HATest {
   @Override
   protected ClusterManager getClusterManager() {
-    GlobalConfiguration globalConfiguration = ConfigUtil.createGlobalConfigurationForTesting();
-    return new InfinispanClusterManager(globalConfiguration);
+    return new InfinispanClusterManager("infinispan-test.xml");
   }
-
 }
