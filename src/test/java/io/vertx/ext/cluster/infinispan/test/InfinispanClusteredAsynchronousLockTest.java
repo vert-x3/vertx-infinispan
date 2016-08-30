@@ -16,14 +16,43 @@
 
 package io.vertx.ext.cluster.infinispan.test;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.test.core.ClusteredAsynchronousLockTest;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Thomas Segismont
  */
 public class InfinispanClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
+
+  @Override
+  protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
+    CountDownLatch latch = new CountDownLatch(1);
+    Future<Vertx> future = Future.future();
+    future.setHandler(ar);
+    super.clusteredVertx(options, asyncResult -> {
+      if (asyncResult.succeeded()) {
+        future.complete(asyncResult.result());
+      } else {
+        future.fail(asyncResult.cause());
+      }
+      latch.countDown();
+    });
+    try {
+      assertTrue(latch.await(2, TimeUnit.MINUTES));
+    } catch (InterruptedException e) {
+      fail(e.getMessage());
+    }
+  }
+
   @Override
   protected ClusterManager getClusterManager() {
     return new InfinispanClusterManager("infinispan-test.xml");
