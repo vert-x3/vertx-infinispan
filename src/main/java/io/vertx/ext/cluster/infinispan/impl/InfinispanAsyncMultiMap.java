@@ -170,7 +170,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     private MeaningLessValue() {
     }
 
-    public class MeaningLessValueExternalizer implements Externalizer<MeaningLessValue> {
+    public static class MeaningLessValueExternalizer implements Externalizer<MeaningLessValue> {
       @Override
       public void writeObject(ObjectOutput output, MeaningLessValue object) throws IOException {
       }
