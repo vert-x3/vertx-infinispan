@@ -45,13 +45,12 @@ import java.util.stream.Collectors;
  * @author Thomas Segismont
  */
 public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
-  private static final String VALUE = "__vertx.infinispan.multimap.value";
 
   private final Vertx vertx;
-  private final Cache<MultiMapKey<Object, Object>, String> cache;
+  private final Cache<MultiMapKey<Object, Object>, Object> cache;
   private final ConcurrentMap<K, ChoosableIterable<V>> choosableIterables;
 
-  public InfinispanAsyncMultiMap(Vertx vertx, Cache<MultiMapKey<Object, Object>, String> cache) {
+  public InfinispanAsyncMultiMap(Vertx vertx, Cache<MultiMapKey<Object, Object>, Object> cache) {
     this.vertx = vertx;
     this.cache = cache;
     this.choosableIterables = new ConcurrentHashMap<>();
@@ -62,8 +61,8 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
     Context context = vertx.getOrCreateContext();
-    FutureAdapter<String> futureAdapter = new FutureAdapter<>(context);
-    cache.putAsync(new MultiMapKey<>(kk, vv), VALUE).attachListener(futureAdapter);
+    FutureAdapter<Object> futureAdapter = new FutureAdapter<>(context);
+    cache.putAsync(new MultiMapKey<>(kk, vv), MeaningLessValue.INSTANCE).attachListener(futureAdapter);
     futureAdapter.getVertxFuture().map((Void) null).setHandler(completionHandler);
   }
 
@@ -79,7 +78,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     Object vv = DataConverter.toCachedObject(v);
     Context context = vertx.getOrCreateContext();
     FutureAdapter<Boolean> futureAdapter = new FutureAdapter<>(context);
-    cache.removeAsync(new MultiMapKey<>(kk, vv), VALUE).attachListener(futureAdapter);
+    cache.removeAsync(new MultiMapKey<>(kk, vv), MeaningLessValue.INSTANCE).attachListener(futureAdapter);
     futureAdapter.getVertxFuture().setHandler(completionHandler);
   }
 
@@ -160,6 +159,25 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
       @Override
       public KeyEqualsPredicate readObject(ObjectInput input) throws IOException, ClassNotFoundException {
         return new KeyEqualsPredicate(input.readObject());
+      }
+    }
+  }
+
+  @SerializeWith(MeaningLessValue.MeaningLessValueExternalizer.class)
+  public static class MeaningLessValue {
+    public static final MeaningLessValue INSTANCE = new MeaningLessValue();
+
+    private MeaningLessValue() {
+    }
+
+    public class MeaningLessValueExternalizer implements Externalizer<MeaningLessValue> {
+      @Override
+      public void writeObject(ObjectOutput output, MeaningLessValue object) throws IOException {
+      }
+
+      @Override
+      public MeaningLessValue readObject(ObjectInput input) throws IOException, ClassNotFoundException {
+        return MeaningLessValue.INSTANCE;
       }
     }
   }

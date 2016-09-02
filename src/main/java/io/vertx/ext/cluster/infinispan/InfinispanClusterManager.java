@@ -93,7 +93,7 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
-      Cache<MultiMapKey<Object, Object>, String> cache = cacheManager.getCache(name, CONFIG_TEMPLATE);
+      Cache<MultiMapKey<Object, Object>, Object> cache = cacheManager.getCache(name, CONFIG_TEMPLATE);
       future.complete(new InfinispanAsyncMultiMap<>(vertx, cache));
     }, false, resultHandler);
   }
