@@ -29,11 +29,6 @@
 
     <jmx duplicate-domains="true"/>
 
-    <replicated-cache name="__vertx.subs">
-      <eviction strategy="NONE"/>
-      <expiration interval="-1"/>
-    </replicated-cache>
-
     <distributed-cache-configuration name="__vertx.distributed.cache.config">
       <eviction strategy="NONE"/>
       <expiration interval="-1"/>

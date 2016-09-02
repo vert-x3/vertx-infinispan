@@ -21,25 +21,35 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import org.infinispan.Cache;
 import org.infinispan.commons.marshall.Externalizer;
 import org.infinispan.commons.marshall.SerializeWith;
+import org.infinispan.notifications.Listener;
+import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
+import org.infinispan.notifications.cachelistener.annotation.CacheEntryRemoved;
+import org.infinispan.notifications.cachelistener.event.CacheEntryCreatedEvent;
+import org.infinispan.notifications.cachelistener.event.CacheEntryRemovedEvent;
 import org.infinispan.stream.CacheCollectors;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.io.Serializable;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.*;
+import static org.infinispan.notifications.Listener.Observation.*;
 
 /**
  * @author Thomas Segismont
@@ -47,13 +57,17 @@ import java.util.stream.Collectors;
 public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
   private final Vertx vertx;
-  private final Cache<MultiMapKey<Object, Object>, Object> cache;
-  private final ConcurrentMap<K, ChoosableIterable<V>> choosableIterables;
+  private final Cache<MultiMapKey, Object> cache;
 
-  public InfinispanAsyncMultiMap(Vertx vertx, Cache<MultiMapKey<Object, Object>, Object> cache) {
+  private final ConcurrentMap<K, ChoosableSet<V>> nearCache;
+  private final AtomicInteger getInProgressCount;
+
+  public InfinispanAsyncMultiMap(Vertx vertx, Cache<MultiMapKey, Object> cache) {
     this.vertx = vertx;
     this.cache = cache;
-    this.choosableIterables = new ConcurrentHashMap<>();
+    nearCache = new ConcurrentHashMap<>();
+    getInProgressCount = new AtomicInteger();
+    cache.addListener(new EntryListener());
   }
 
   @Override
@@ -62,14 +76,46 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     Object vv = DataConverter.toCachedObject(v);
     Context context = vertx.getOrCreateContext();
     FutureAdapter<Object> futureAdapter = new FutureAdapter<>(context);
-    cache.putAsync(new MultiMapKey<>(kk, vv), MeaningLessValue.INSTANCE).attachListener(futureAdapter);
+    cache.putAsync(new MultiMapKey(kk, vv), MeaningLessValue.INSTANCE).attachListener(futureAdapter);
     futureAdapter.getVertxFuture().map((Void) null).setHandler(completionHandler);
   }
 
   @Override
-  public void get(K k, Handler<AsyncResult<ChoosableIterable<V>>> asyncResultHandler) {
-    ChoosableIterable<V> choosableIterable = choosableIterables.computeIfAbsent(k, ChoosableIterableImpl::new);
-    Future.succeededFuture(choosableIterable).setHandler(asyncResultHandler);
+  public void get(K k, Handler<AsyncResult<ChoosableIterable<V>>> resultHandler) {
+    ChoosableSet<V> entries = nearCache.get(k);
+    if (entries != null && entries.isInitialised() && getInProgressCount.get() == 0) {
+      resultHandler.handle(Future.succeededFuture(entries));
+    } else {
+      getInProgressCount.incrementAndGet();
+      vertx.<ChoosableIterable<V>>executeBlocking(fut -> {
+        List<MultiMapKey> collect = cache.keySet().parallelStream()
+          .filter(new KeyEqualsPredicate(DataConverter.toCachedObject(k)))
+          .collect(CacheCollectors.serializableCollector(Collectors::toList));
+        Collection<V> entries2 = collect.stream()
+          .map(mmk -> DataConverter.<V>fromCachedObject(mmk.getValue()))
+          .collect(toList());
+        ChoosableSet<V> sids;
+        if (entries2 != null) {
+          sids = new ChoosableSet<>(entries2.size());
+          for (V hid : entries2) {
+            sids.add(hid);
+          }
+        } else {
+          sids = new ChoosableSet<>(0);
+        }
+        ChoosableSet<V> prev = (sids.isEmpty()) ? null : nearCache.putIfAbsent(k, sids);
+        if (prev != null) {
+          // Merge them
+          prev.merge(sids);
+          sids = prev;
+        }
+        sids.setInitialised();
+        fut.complete(sids);
+      }, res -> {
+        getInProgressCount.decrementAndGet();
+        resultHandler.handle(res);
+      });
+    }
   }
 
   @Override
@@ -78,7 +124,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     Object vv = DataConverter.toCachedObject(v);
     Context context = vertx.getOrCreateContext();
     FutureAdapter<Boolean> futureAdapter = new FutureAdapter<>(context);
-    cache.removeAsync(new MultiMapKey<>(kk, vv), MeaningLessValue.INSTANCE).attachListener(futureAdapter);
+    cache.removeAsync(new MultiMapKey(kk, vv), MeaningLessValue.INSTANCE).attachListener(futureAdapter);
     futureAdapter.getVertxFuture().setHandler(completionHandler);
   }
 
@@ -86,8 +132,8 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
   public void removeAllForValue(V v, Handler<AsyncResult<Void>> completionHandler) {
     Object vv = DataConverter.toCachedObject(v);
     vertx.executeBlocking(future -> {
-      for (Iterator<MultiMapKey<Object, Object>> iterator = cache.keySet().iterator(); iterator.hasNext(); ) {
-        MultiMapKey<Object, Object> next = iterator.next();
+      for (Iterator<MultiMapKey> iterator = cache.keySet().iterator(); iterator.hasNext(); ) {
+        MultiMapKey next = iterator.next();
         if (next.getValue().equals(vv)) {
           iterator.remove();
         }
@@ -96,69 +142,85 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     }, false, completionHandler);
   }
 
-  private class ChoosableIterableImpl implements ChoosableIterable<V> {
-    private final Object kk;
-    private final AtomicInteger idx;
-
-    ChoosableIterableImpl(K k) {
-      this.kk = DataConverter.toCachedObject(k);
-      idx = new AtomicInteger();
+  @Listener(clustered = true, observation = POST)
+  private class EntryListener {
+    @CacheEntryCreated
+    public void entryCreated(CacheEntryCreatedEvent<MultiMapKey, Object> event) {
+      MultiMapKey multiMapKey = event.getKey();
+      K k = DataConverter.fromCachedObject(multiMapKey.getKey());
+      V v = DataConverter.fromCachedObject(multiMapKey.getValue());
+      ChoosableSet<V> entries = nearCache.get(k);
+      if (entries == null) {
+        entries = new ChoosableSet<>(1);
+        ChoosableSet<V> prev = nearCache.putIfAbsent(k, entries);
+        if (prev != null) {
+          entries = prev;
+        }
+      }
+      entries.add(v);
     }
 
-    @Override
-    public boolean isEmpty() {
-      return !cache.keySet().parallelStream().anyMatch(new KeyEqualsPredicate(kk));
-    }
-
-    @Override
-    public V choose() {
-      List<V> list = getList();
-      return list.get(mod(idx.getAndIncrement(), list.size()));
-    }
-
-    private int mod(int idx, int size) {
-      int i = idx % size;
-      return i < 0 ? i + size : i;
-    }
-
-    @Override
-    public Iterator<V> iterator() {
-      return getList().iterator();
-    }
-
-    private List<V> getList() {
-      return cache.keySet().parallelStream()
-        .filter(new KeyEqualsPredicate(kk))
-        .map((Serializable & Function<MultiMapKey<Object, Object>, Object>) MultiMapKey::getValue)
-        .map((Serializable & Function<Object, V>) DataConverter::fromCachedObject)
-        .collect(CacheCollectors.serializableCollector(Collectors::toList));
+    @CacheEntryRemoved
+    public void entryRemoved(CacheEntryRemovedEvent<MultiMapKey, Object> event) {
+      MultiMapKey multiMapKey = event.getKey();
+      K k = DataConverter.fromCachedObject(multiMapKey.getKey());
+      V v = DataConverter.fromCachedObject(multiMapKey.getValue());
+      ChoosableSet<V> entries = nearCache.get(k);
+      if (entries != null) {
+        entries.remove(v);
+        if (entries.isEmpty()) {
+          nearCache.remove(k);
+        }
+      }
     }
   }
 
-  @SerializeWith(KeyEqualsPredicate.KeyEqualsPredicateExternalizer.class)
-  public static class KeyEqualsPredicate implements Predicate<MultiMapKey<Object, Object>> {
+  @SerializeWith(MultiMapKey.MultiMapKeyExternalizer.class)
+  public static class MultiMapKey {
+    private final Object key;
+    private final Object value;
 
-    private final Object kk;
 
-    public KeyEqualsPredicate(Object kk) {
-      this.kk = kk;
+    public MultiMapKey(Object key, Object value) {
+      this.key = key;
+      this.value = value;
+    }
+
+    public Object getKey() {
+      return key;
+    }
+
+    public Object getValue() {
+      return value;
     }
 
     @Override
-    public boolean test(MultiMapKey<Object, Object> mmk) {
-      return mmk.getKey().equals(kk);
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      MultiMapKey that = (MultiMapKey) o;
+      return key.equals(that.key) && value.equals(that.value);
+
     }
 
-    public static class KeyEqualsPredicateExternalizer implements Externalizer<KeyEqualsPredicate> {
+    @Override
+    public int hashCode() {
+      int result = key.hashCode();
+      result = 31 * result + value.hashCode();
+      return result;
+    }
 
+    public static class MultiMapKeyExternalizer implements Externalizer<MultiMapKey> {
       @Override
-      public void writeObject(ObjectOutput output, KeyEqualsPredicate object) throws IOException {
-        output.writeObject(object.kk);
+      public void writeObject(ObjectOutput output, MultiMapKey object) throws IOException {
+        output.writeObject(object.key);
+        output.writeObject(object.value);
       }
 
       @Override
-      public KeyEqualsPredicate readObject(ObjectInput input) throws IOException, ClassNotFoundException {
-        return new KeyEqualsPredicate(input.readObject());
+      @SuppressWarnings("unchecked")
+      public MultiMapKey readObject(ObjectInput input) throws IOException, ClassNotFoundException {
+        return new MultiMapKey(input.readObject(), input.readObject());
       }
     }
   }
@@ -178,6 +240,92 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
       @Override
       public MeaningLessValue readObject(ObjectInput input) throws IOException, ClassNotFoundException {
         return MeaningLessValue.INSTANCE;
+      }
+    }
+  }
+
+  @SerializeWith(KeyEqualsPredicate.KeyEqualsPredicateExternalizer.class)
+  public static class KeyEqualsPredicate implements Predicate<MultiMapKey> {
+
+    private final Object kk;
+
+    public KeyEqualsPredicate(Object kk) {
+      this.kk = kk;
+    }
+
+    @Override
+    public boolean test(MultiMapKey mmk) {
+      return mmk.getKey().equals(kk);
+    }
+
+    public static class KeyEqualsPredicateExternalizer implements Externalizer<KeyEqualsPredicate> {
+
+      @Override
+      public void writeObject(ObjectOutput output, KeyEqualsPredicate object) throws IOException {
+        output.writeObject(object.kk);
+      }
+
+      @Override
+      public KeyEqualsPredicate readObject(ObjectInput input) throws IOException, ClassNotFoundException {
+        return new KeyEqualsPredicate(input.readObject());
+      }
+    }
+  }
+
+  /**
+   * @author <a href="http://tfox.org">Tim Fox</a>
+   */
+  private static class ChoosableSet<T> implements ChoosableIterable<T> {
+
+    private volatile boolean initialised;
+    private final Set<T> ids;
+    private volatile Iterator<T> iter;
+
+    public ChoosableSet(int initialSize) {
+      ids = new ConcurrentHashSet<>(initialSize);
+    }
+
+    public boolean isInitialised() {
+      return initialised;
+    }
+
+    public void setInitialised() {
+      this.initialised = true;
+    }
+
+    public void add(T elem) {
+      ids.add(elem);
+    }
+
+    public void remove(T elem) {
+      ids.remove(elem);
+    }
+
+    public void merge(ChoosableSet<T> toMerge) {
+      ids.addAll(toMerge.ids);
+    }
+
+    public boolean isEmpty() {
+      return ids.isEmpty();
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+      return ids.iterator();
+    }
+
+    public synchronized T choose() {
+      if (!ids.isEmpty()) {
+        if (iter == null || !iter.hasNext()) {
+          iter = ids.iterator();
+        }
+        try {
+          return iter.next();
+        } catch (NoSuchElementException e) {
+          return null;
+        }
+      } else {
+        return null;
       }
     }
   }
