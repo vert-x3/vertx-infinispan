@@ -30,6 +30,7 @@
     <distributed-cache-configuration name="__vertx.distributed.cache.config">
       <eviction strategy="NONE"/>
       <expiration interval="-1"/>
+      <partition-handling enabled="true"/>
     </distributed-cache-configuration>
 
   </cache-container>
