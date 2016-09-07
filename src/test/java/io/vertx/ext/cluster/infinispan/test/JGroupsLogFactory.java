@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package io.vertx.ext.cluster.infinispan.impl;
+package io.vertx.ext.cluster.infinispan.test;
 
 import io.vertx.core.logging.LoggerFactory;
 import org.jgroups.logging.CustomLogFactory;

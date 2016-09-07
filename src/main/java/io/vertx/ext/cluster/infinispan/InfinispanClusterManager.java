@@ -32,7 +32,6 @@ import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap.MultiMapKey;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsCounter;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsLock;
-import io.vertx.ext.cluster.infinispan.impl.JGroupsLogFactory;
 import org.infinispan.Cache;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.notifications.Listener;
@@ -40,7 +39,6 @@ import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
-import org.jgroups.Global;
 import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
 
@@ -58,12 +56,6 @@ import static java.util.stream.Collectors.*;
  */
 public class InfinispanClusterManager implements ClusterManager {
   private static final Logger log = LoggerFactory.getLogger(InfinispanClusterManager.class);
-
-  static {
-    if (System.getProperty(Global.CUSTOM_LOG_FACTORY) == null) {
-      org.jgroups.logging.LogFactory.setCustomLogFactory(new JGroupsLogFactory());
-    }
-  }
 
   private static final String CONFIG_TEMPLATE = "__vertx.distributed.cache.config";
 
