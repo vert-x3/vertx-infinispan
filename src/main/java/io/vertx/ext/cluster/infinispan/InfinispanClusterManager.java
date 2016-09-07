@@ -61,7 +61,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   static {
     if (System.getProperty(Global.CUSTOM_LOG_FACTORY) == null) {
-      System.setProperty(Global.CUSTOM_LOG_FACTORY, JGroupsLogFactory.class.getName());
+      org.jgroups.logging.LogFactory.setCustomLogFactory(new JGroupsLogFactory());
     }
   }
 
