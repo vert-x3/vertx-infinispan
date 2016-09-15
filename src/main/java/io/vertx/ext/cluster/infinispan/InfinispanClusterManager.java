@@ -33,16 +33,22 @@ import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap.MultiMapKey;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsCounter;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsLock;
 import org.infinispan.Cache;
+import org.infinispan.commons.util.FileLookup;
+import org.infinispan.commons.util.FileLookupFactory;
+import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
+import org.infinispan.configuration.parsing.ParserRegistry;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
+import org.jboss.marshalling.AbstractClassResolver;
 import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -138,7 +144,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void nodeListener(NodeListener nodeListener) {
+  public synchronized void nodeListener(NodeListener nodeListener) {
     this.nodeListener = nodeListener;
   }
 
@@ -151,7 +157,17 @@ public class InfinispanClusterManager implements ClusterManager {
       }
       active = true;
       try {
-        cacheManager = new DefaultCacheManager(configPath);
+        FileLookup fileLookup = FileLookupFactory.newInstance();
+        InputStream inputStream = fileLookup.lookupFileStrict(configPath, Thread.currentThread().getContextClassLoader());
+        ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(inputStream);
+        builderHolder.getGlobalConfigurationBuilder().serialization().classResolver(new AbstractClassResolver() {
+          @Override
+          protected ClassLoader getClassLoader() {
+            ClassLoader ctxcl = Thread.currentThread().getContextClassLoader();
+            return ctxcl != null ? ctxcl : getClass().getClassLoader();
+          }
+        });
+        cacheManager = new DefaultCacheManager(builderHolder, true);
       } catch (IOException e) {
         future.fail(e);
       }
@@ -181,7 +197,7 @@ public class InfinispanClusterManager implements ClusterManager {
     return active;
   }
 
-  @Listener
+  @Listener(sync = false)
   private class ClusterViewListener {
     @ViewChanged
     public void handleViewChange(final ViewChangedEvent e) {
@@ -192,11 +208,19 @@ public class InfinispanClusterManager implements ClusterManager {
         List<Address> added = new ArrayList<>(e.getNewMembers());
         added.removeAll(e.getOldMembers());
         log.debug("Members added = " + added);
-        added.forEach(address -> nodeListener.nodeAdded(address.toString()));
+        added.forEach(address -> {
+          if (nodeListener != null) {
+            nodeListener.nodeAdded(address.toString());
+          }
+        });
         List<Address> removed = new ArrayList<>(e.getOldMembers());
         removed.removeAll(e.getNewMembers());
         log.debug("Members removed = " + removed);
-        removed.forEach(address -> nodeListener.nodeLeft(address.toString()));
+        removed.forEach(address -> {
+          if (nodeListener != null) {
+            nodeListener.nodeLeft(address.toString());
+          }
+        });
       }
     }
   }

@@ -32,6 +32,8 @@ import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
 import org.infinispan.notifications.cachelistener.annotation.CacheEntryRemoved;
 import org.infinispan.notifications.cachelistener.event.CacheEntryCreatedEvent;
 import org.infinispan.notifications.cachelistener.event.CacheEntryRemovedEvent;
+import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
+import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.stream.CacheCollectors;
 
 import java.io.IOException;
@@ -68,6 +70,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     nearCache = new ConcurrentHashMap<>();
     getInProgressCount = new AtomicInteger();
     cache.addListener(new EntryListener());
+    cache.getCacheManager().addListener(new ViewChangeListener());
   }
 
   @Override
@@ -142,7 +145,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     }, false, completionHandler);
   }
 
-  @Listener(clustered = true, observation = POST)
+  @Listener(clustered = true, observation = POST, sync = false)
   private class EntryListener {
     @CacheEntryCreated
     public void entryCreated(CacheEntryCreatedEvent<MultiMapKey, Object> event) {
@@ -326,6 +329,17 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
         }
       } else {
         return null;
+      }
+    }
+  }
+
+  @Listener(sync = false)
+  private class ViewChangeListener {
+    @ViewChanged
+    public void handleViewChange(final ViewChangedEvent e) {
+      if (e.isMergeView()) {
+        // In case we're merging two partitions, make sure all nodes see the same data
+        InfinispanAsyncMultiMap.this.nearCache.clear();
       }
     }
   }
