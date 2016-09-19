@@ -43,7 +43,6 @@ import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
-import org.jboss.marshalling.AbstractClassResolver;
 import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
 
@@ -160,13 +159,12 @@ public class InfinispanClusterManager implements ClusterManager {
         FileLookup fileLookup = FileLookupFactory.newInstance();
         InputStream inputStream = fileLookup.lookupFileStrict(configPath, Thread.currentThread().getContextClassLoader());
         ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(inputStream);
-        builderHolder.getGlobalConfigurationBuilder().serialization().classResolver(new AbstractClassResolver() {
-          @Override
-          protected ClassLoader getClassLoader() {
-            ClassLoader ctxcl = Thread.currentThread().getContextClassLoader();
-            return ctxcl != null ? ctxcl : getClass().getClassLoader();
-          }
-        });
+        // Workaround Launcher in fatjar issue (context classloader may be null)
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+          classLoader = getClass().getClassLoader();
+        }
+        builderHolder.getGlobalConfigurationBuilder().classLoader(classLoader);
         cacheManager = new DefaultCacheManager(builderHolder, true);
       } catch (IOException e) {
         future.fail(e);
