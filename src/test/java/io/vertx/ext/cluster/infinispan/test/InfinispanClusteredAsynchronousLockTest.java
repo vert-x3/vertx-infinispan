@@ -24,6 +24,7 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.test.core.ClusteredAsynchronousLockTest;
+import org.junit.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -56,5 +57,17 @@ public class InfinispanClusteredAsynchronousLockTest extends ClusteredAsynchrono
   @Override
   protected ClusterManager getClusterManager() {
     return new InfinispanClusterManager("infinispan-test.xml");
+  }
+
+  @Override
+  @Test
+  public void testLockReleasedForClosedNode() throws Exception {
+    super.testLockReleasedForClosedNode();
+  }
+
+  @Override
+  @Test
+  public void testLockReleasedForKilledNode() throws Exception {
+    super.testLockReleasedForKilledNode();
   }
 }
