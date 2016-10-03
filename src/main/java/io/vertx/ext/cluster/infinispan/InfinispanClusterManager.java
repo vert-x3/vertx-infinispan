@@ -74,7 +74,7 @@ public class InfinispanClusterManager implements ClusterManager {
   private volatile boolean active;
 
   public InfinispanClusterManager() {
-    this.configPath = "infinispan.xml";
+    this.configPath = System.getProperty("vertx.infinispan.config", "infinispan.xml");
   }
 
   public InfinispanClusterManager(String configPath) {
