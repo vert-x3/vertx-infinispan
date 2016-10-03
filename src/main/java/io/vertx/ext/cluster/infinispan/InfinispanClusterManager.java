@@ -82,6 +82,12 @@ public class InfinispanClusterManager implements ClusterManager {
     this.configPath = configPath;
   }
 
+  public InfinispanClusterManager(DefaultCacheManager cacheManager) {
+    Objects.requireNonNull(cacheManager, "cacheManager");
+    this.cacheManager = cacheManager;
+    configPath = null;
+  }
+
   @Override
   public void setVertx(Vertx vertx) {
     this.vertx = vertx;
@@ -155,19 +161,21 @@ public class InfinispanClusterManager implements ClusterManager {
         return;
       }
       active = true;
-      try {
-        FileLookup fileLookup = FileLookupFactory.newInstance();
-        InputStream inputStream = fileLookup.lookupFileStrict(configPath, Thread.currentThread().getContextClassLoader());
-        ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(inputStream);
-        // Workaround Launcher in fatjar issue (context classloader may be null)
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        if (classLoader == null) {
-          classLoader = getClass().getClassLoader();
+      if (cacheManager == null) {
+        try {
+          FileLookup fileLookup = FileLookupFactory.newInstance();
+          InputStream inputStream = fileLookup.lookupFileStrict(configPath, Thread.currentThread().getContextClassLoader());
+          ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(inputStream);
+          // Workaround Launcher in fatjar issue (context classloader may be null)
+          ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+          if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
+          }
+          builderHolder.getGlobalConfigurationBuilder().classLoader(classLoader);
+          cacheManager = new DefaultCacheManager(builderHolder, true);
+        } catch (IOException e) {
+          future.fail(e);
         }
-        builderHolder.getGlobalConfigurationBuilder().classLoader(classLoader);
-        cacheManager = new DefaultCacheManager(builderHolder, true);
-      } catch (IOException e) {
-        future.fail(e);
       }
       cacheManager.addListener(new ClusterViewListener());
       JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
