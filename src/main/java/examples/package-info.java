@@ -14,31 +14,10 @@
  * under the License.
  */
 
-package examples;
-
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
-
 /**
  * @author Thomas Segismont
  */
-public class DocumentationExamples {
+@Source
+package examples;
 
-  public void startClusteredVertx() {
-    InfinispanClusterManager manager = new InfinispanClusterManager();
-    VertxOptions vertxOptions = new VertxOptions();
-    vertxOptions
-      .setClustered(true)
-      .setClusterManager(manager);
-    Vertx.clusteredVertx(vertxOptions, ar -> {
-      if (ar.succeeded()) {
-        Vertx vertx = ar.result();
-        // Deploy you verticles
-      } else {
-        // Handle failure
-      }
-    });
-  }
-
-}
+import io.vertx.docgen.Source;

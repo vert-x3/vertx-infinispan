@@ -1,70 +1,11 @@
-= vertx-infinispan
+= Infinispan Cluster Manager
 
-A Vert.x cluster manager implementation based on Infinispan and JGroups.
+image:https://vertx.ci.cloudbees.com/buildStatus/icon?job=vert.x3-infinispan["Build Status",link="https://vertx.ci.cloudbees.com/view/vert.x-3/job/vert.x3-infinispan/"]
 
-== Goal
+This is a cluster manager implementation for Vert.x that uses http://infinispan.com[Infinispan].
 
-This cluster manager is inspired by the https://github.com/vert-x3/vertx-jgroups/[JGroups cluster manager].
+Please see the in-source asciidoc documentation or the main documentation on the web-site for a full description
+of this component:
 
-The major difference is that it does not use raw JGroups services for distributed maps, where Infinispan really shines.
-
-== Using
-
-The project is not released yet, so you must build the source first.
-
-Fork and clone the git repository. Checkout the `initial-work` branch. Then build:
-
-[source,bash]
-----
-mvn clean install -DskipTests
-----
-
-=== With the Vert.x command line
-
-The build process will create a `target/vertx-infinispan-3.4.0-SNAPSHOT.jar` archive. Copy this archive in your
-Vert.x CLI `lib` directory.
-
-If there are others cluster managers implementations in the `lib` directory, you can select the right one with a Java
-system property: `vertx.clusterManagerFactory=io.vertx.spi.cluster.jgroups.JGroupsClusterManager`.
-
-Check out the http://vertx.io/docs/vertx-core/java/#_the_vertx_command_line[Vert.x CLI documentation]
-if you're not sure how to do that.
-
-=== With embedded Vert.x
-
-First, add the following to your Maven POM file:
-
-[source,xml]
-----
-<dependency>
-  <groupId>io.vertx</groupId>
-  <artifactId>vertx-infinispan</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
-</dependency>
-----
-
-Then create the clustered Vert.x instance with the `io.vertx.ext.cluster.infinispan.InfinispanClusterManager` manager:
-
-[source,java]
-----
-InfinispanClusterManager manager = new InfinispanClusterManager();
-VertxOptions vertxOptions = new VertxOptions();
-vertxOptions
-  .setClustered(true)
-  .setClusterManager(manager);
-Vertx.clusteredVertx(vertxOptions, ar -> {
-  if (ar.succeeded()) {
-    Vertx vertx = ar.result();
-    // Deploy you verticles
-  } else {
-    // Handle failure
-  }
-});
-----
-
-== Configuring
-
-Infinispan relies on JGroups for cluster coordination. If you don't want to use the default JGroups config provided
-by this cluster manager, put a `vert.x-jgroups.xml` file on the classpath.
-
-IMPORTANT: The conchannel definition must include one of the locking (`CENTRAL_LOCK` by default) protocols and the `COUNTER` protocol.
+* link:http://vertx.io/docs/vertx-infinispan/java/[web-site docs]
+* link:src/main/asciidoc/java/index.adoc[in-source docs]
