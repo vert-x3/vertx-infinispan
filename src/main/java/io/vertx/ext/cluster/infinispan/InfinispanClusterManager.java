@@ -193,7 +193,9 @@ public class InfinispanClusterManager implements ClusterManager {
         return;
       }
       active = false;
-      cacheManager.stop();
+      if (configPath == null) {
+        cacheManager.stop();
+      }
       future.complete();
     }, false, resultHandler);
   }
