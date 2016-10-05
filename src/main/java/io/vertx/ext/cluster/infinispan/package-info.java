@@ -160,9 +160,20 @@
  * To tell JGroups to use a specific interface you can provide the IP address of the interface in the `bind_addr`
  * element of the configuration. For example:
  *
+ * [source,xml]
  * ----
+ * <TCP bind_addr="192.168.1.20"
+ *      ...
+ *      />
  * <MPING bind_addr="192.168.1.20"
  *      ...
+ *      />
+ * ----
+ *
+ * Alternatively, if you want to stick with the bundled `jgroups.xml` file, you can set the `jgroups.tcp.address` system property:
+ *
+ * ----
+ * -Djgroups.tcp.address=192.168.1.20
  * ----
  *
  * When running Vert.x is in clustered mode, you should also make sure that Vert.x knows about the correct interface.
