@@ -205,6 +205,14 @@ you should configure another protocol, e.g. `TCPPING` to use TCP sockets, or `S3
 For more information on available JGroups discovery protocols and how to configure them
 please consult the http://www.jgroups.org/manual/index.html#Discovery[JGroups documentation].
 
+=== Problems with IPv6
+
+If you have troubles configuring an IPv6 host, force the use of IPv4 with the `java.net.preferIPv4Stack` system property.
+
+----
+-Djava.net.preferIPv4Stack=true
+----
+
 === Enabling logging
 
 When trouble-shooting clustering issues with it's often useful to get some logging output from Infinispan and JGroups
