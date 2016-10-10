@@ -27,10 +27,12 @@
 
     <transport stack="jgroups"/>
 
-    <distributed-cache-configuration name="__vertx.distributed.cache.config">
-      <eviction strategy="NONE"/>
+    <replicated-cache name="__vertx.haInfo">
       <expiration interval="-1"/>
-      <partition-handling enabled="true"/>
+    </replicated-cache>
+
+    <distributed-cache-configuration name="__vertx.distributed.cache.config">
+      <expiration interval="-1"/>
     </distributed-cache-configuration>
 
   </cache-container>
