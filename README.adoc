@@ -12,3 +12,4 @@ of this component:
 
 Testing PR build
 Update 2
+Update 3
