@@ -11,5 +11,6 @@ of this component:
 * link:src/main/asciidoc/java/index.adoc[in-source docs]
 
 -- Test trigger on PR --
+-- Test trigger on PR --
 
 
