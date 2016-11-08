@@ -9,5 +9,3 @@ of this component:
 
 * link:http://vertx.io/docs/vertx-infinispan/java/[web-site docs]
 * link:src/main/asciidoc/java/index.adoc[in-source docs]
-
--- will remove --
