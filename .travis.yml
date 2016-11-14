@@ -2,11 +2,9 @@ sudo: required
 language: java
 notifications:
   email:
-    - vertx3-ci@googlegroups.com
-addons:
-  apt:
-    packages:
-      - oracle-java8-installer
+  - vertx3-ci@googlegroups.com
+jdk:
+- oraclejdk8
 cache:
   directories:
   - $HOME/.m2/repository
