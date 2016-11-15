@@ -8,6 +8,7 @@ jdk:
 branches:
   only:
   - master
+  - initial-work
 env:
   global:
   - secure: h/+qh4ettSXklrOCVp2oAU4ifiNEFZ7dyZwwJd8Tw+9+uD/osgUmHBFH8/q+EHzhYg2umSvrgkuxmj4ygJBPiBmWXk1/Tsr1HZqz6LJqg/g9csj1RQjgn+FDkFGJg7OD6ldiW4yuZwPcrjn8PkqxgrTmlf54rFJtGrXOfHxLgdh/IinBhTor2pldLT+QRPki5vQH5jk0HQIv2XC1N7R/5BjX54A/QghoMxIYYL4aRuHt2IlaRsmp8c49zo+6Z6BagP/MpxTEcm6gf+Cr9ZxMOT7qErHzXTQV7LE6JA0YeYuZpiDrlX23IItLQG55U4l+UAGxq0c2PGR05BsIRPsoxKQvprI4fW16kIemMv1ipM3ZbFH0+9kvn6rjF4YpUD+ZCVTEP1orYIy0WsZiAVOWIxRFvpurAP8ajWv5BFeSy4MzchieDZdV6yL9pgLVf/xDaNq86VovRJiRB1NCRk+UMyQsg+u+jINrfCR7lu6w1Kp0Jwit2hSaJL5tnIx95z/tZw8wWC1o73Jy6aTsfPBbVW1/f6yJZe75zEyQxzCfaDIJCm9DkD1uw4NBavxq57emNYxL+XX+voUAgNA9ePmivrHAiXQXaBbTkIOcoQkWSSjmgMeg30FC4/BIl5WmS+uHIouo0Nf0OUa3TX0BLscL2bx6yGKMS4e2hc3G788nLv8=
