@@ -145,7 +145,7 @@
  * <COUNTER bypass_bundling="true"/>
  * ----
  *
- * === Configuring for Openshift 3
+ * == Configuring for Openshift 3
  *
  * In order to run a Vert.x cluster on Openshift 3, a few configuration and dependencies changes are needed.
  *
@@ -271,6 +271,17 @@
  *
  * Further configuration details are available in the
  * https://github.com/jgroups-extras/jgroups-kubernetes[Kubernetes discovery protocol for JGroups] README.
+ *
+ * == Configuring for Docker Compose
+ *
+ * Make sure to start the Java Virtual Machines with those system properties:
+ *
+ * [source, shell]
+ * ----
+ * -Djava.net.preferIPv4Stack=true -Djgroups.tcp.address=NON_LOOPBACK
+ * ----
+ *
+ * This will make JGroups pick the interface of the virtual private network created by Docker.
  *
  * == Trouble shooting clustering
  *
