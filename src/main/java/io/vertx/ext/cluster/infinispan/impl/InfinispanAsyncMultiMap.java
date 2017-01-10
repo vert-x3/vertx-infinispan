@@ -135,12 +135,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
   public void removeAllForValue(V v, Handler<AsyncResult<Void>> completionHandler) {
     Object vv = DataConverter.toCachedObject(v);
     vertx.executeBlocking(future -> {
-      for (Iterator<MultiMapKey> iterator = cache.keySet().iterator(); iterator.hasNext(); ) {
-        MultiMapKey next = iterator.next();
-        if (next.getValue().equals(vv)) {
-          iterator.remove();
-        }
-      }
+      cache.keySet().removeIf(multiMapKey -> multiMapKey.getValue().equals(vv));
       future.complete();
     }, false, completionHandler);
   }
