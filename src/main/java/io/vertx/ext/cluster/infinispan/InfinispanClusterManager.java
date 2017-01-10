@@ -74,6 +74,7 @@ public class InfinispanClusterManager implements ClusterManager {
   private CounterService counterService;
   private LockService lockService;
   private volatile boolean active;
+  private ClusterViewListener viewListener;
 
   public InfinispanClusterManager() {
     this.configPath = System.getProperty("vertx.infinispan.config", "infinispan.xml");
@@ -181,7 +182,8 @@ public class InfinispanClusterManager implements ClusterManager {
           future.fail(e);
         }
       }
-      cacheManager.addListener(new ClusterViewListener());
+      viewListener = new ClusterViewListener();
+      cacheManager.addListener(viewListener);
       JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
       counterService = new CounterService(transport.getChannel());
       lockService = new LockService(transport.getChannel());
@@ -197,6 +199,7 @@ public class InfinispanClusterManager implements ClusterManager {
         return;
       }
       active = false;
+      cacheManager.removeListener(viewListener);
       if (configPath != null) {
         cacheManager.stop();
       }
