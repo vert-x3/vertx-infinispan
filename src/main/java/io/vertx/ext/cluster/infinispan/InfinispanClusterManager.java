@@ -41,7 +41,9 @@ import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.notifications.Listener;
+import org.infinispan.notifications.cachemanagerlistener.annotation.Merged;
 import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
+import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
@@ -215,7 +217,16 @@ public class InfinispanClusterManager implements ClusterManager {
   @Listener(sync = false)
   private class ClusterViewListener {
     @ViewChanged
-    public void handleViewChange(final ViewChangedEvent e) {
+    public void handleViewChange(ViewChangedEvent e) {
+      handleViewChangeInternal(e);
+    }
+
+    @Merged
+    public void handleMerge(MergeEvent e) {
+      handleViewChangeInternal(e);
+    }
+
+    private void handleViewChangeInternal(ViewChangedEvent e) {
       synchronized (InfinispanClusterManager.this) {
         if (!active) {
           return;
