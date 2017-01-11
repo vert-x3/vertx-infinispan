@@ -53,9 +53,12 @@ import org.jgroups.blocks.locking.LockService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.*;
@@ -77,6 +80,8 @@ public class InfinispanClusterManager implements ClusterManager {
   private LockService lockService;
   private volatile boolean active;
   private ClusterViewListener viewListener;
+  // Guarded by this
+  private Set<InfinispanAsyncMultiMap> multimaps = Collections.newSetFromMap(new WeakHashMap<>(1));
 
   public InfinispanClusterManager() {
     this.configPath = System.getProperty("vertx.infinispan.config", "infinispan.xml");
@@ -102,7 +107,11 @@ public class InfinispanClusterManager implements ClusterManager {
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
       Cache<MultiMapKey, Object> cache = cacheManager.getCache(name, CONFIG_TEMPLATE);
-      future.complete(new InfinispanAsyncMultiMap<>(vertx, cache));
+      InfinispanAsyncMultiMap<K, V> asyncMultiMap = new InfinispanAsyncMultiMap<>(vertx, cache);
+      synchronized (this) {
+        multimaps.add(asyncMultiMap);
+      }
+      future.complete(asyncMultiMap);
     }, false, resultHandler);
   }
 
@@ -231,6 +240,9 @@ public class InfinispanClusterManager implements ClusterManager {
         if (!active) {
           return;
         }
+
+        multimaps.forEach(InfinispanAsyncMultiMap::clearCache);
+
         List<Address> added = new ArrayList<>(e.getNewMembers());
         added.removeAll(e.getOldMembers());
         log.debug("Members added = " + added);
