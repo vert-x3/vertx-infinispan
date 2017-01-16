@@ -17,11 +17,12 @@
 package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.WorkerExecutor;
 import io.vertx.core.impl.ConcurrentHashSet;
+import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import org.infinispan.Cache;
@@ -56,15 +57,15 @@ import static org.infinispan.notifications.Listener.Observation.*;
  */
 public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
-  private final Vertx vertx;
   private final Cache<MultiMapKey, Object> cache;
 
+  private final WorkerExecutor workerExecutor;
   private final ConcurrentMap<K, ChoosableSet<V>> nearCache;
   private final AtomicInteger getInProgressCount;
 
   public InfinispanAsyncMultiMap(Vertx vertx, Cache<MultiMapKey, Object> cache) {
-    this.vertx = vertx;
     this.cache = cache;
+    workerExecutor = ((ContextInternal) vertx.getOrCreateContext()).createWorkerExecutor();
     nearCache = new ConcurrentHashMap<>();
     getInProgressCount = new AtomicInteger();
     cache.addListener(new EntryListener());
@@ -74,10 +75,10 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
   public void add(K k, V v, Handler<AsyncResult<Void>> completionHandler) {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
-    Context context = vertx.getOrCreateContext();
-    FutureAdapter<Object> futureAdapter = new FutureAdapter<>(context);
-    cache.putAsync(new MultiMapKey(kk, vv), MeaningLessValue.INSTANCE).attachListener(futureAdapter);
-    futureAdapter.getVertxFuture().map((Void) null).setHandler(completionHandler);
+    workerExecutor.executeBlocking(fut -> {
+      cache.put(new MultiMapKey(kk, vv), MeaningLessValue.INSTANCE);
+      fut.complete();
+    }, completionHandler);
   }
 
   @Override
@@ -87,7 +88,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
       resultHandler.handle(Future.succeededFuture(entries));
     } else {
       getInProgressCount.incrementAndGet();
-      vertx.<ChoosableIterable<V>>executeBlocking(fut -> {
+      workerExecutor.<ChoosableIterable<V>>executeBlocking(fut -> {
         List<MultiMapKey> collect = cache.keySet().parallelStream()
           .filter(new KeyEqualsPredicate(DataConverter.toCachedObject(k)))
           .collect(CacheCollectors.serializableCollector(Collectors::toList));
@@ -122,16 +123,15 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
   public void remove(K k, V v, Handler<AsyncResult<Boolean>> completionHandler) {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
-    Context context = vertx.getOrCreateContext();
-    FutureAdapter<Boolean> futureAdapter = new FutureAdapter<>(context);
-    cache.removeAsync(new MultiMapKey(kk, vv), MeaningLessValue.INSTANCE).attachListener(futureAdapter);
-    futureAdapter.getVertxFuture().setHandler(completionHandler);
+    workerExecutor.executeBlocking(fut -> {
+      fut.complete(cache.remove(new MultiMapKey(kk, vv), MeaningLessValue.INSTANCE));
+    }, completionHandler);
   }
 
   @Override
   public void removeAllForValue(V v, Handler<AsyncResult<Void>> completionHandler) {
     Object vv = DataConverter.toCachedObject(v);
-    vertx.executeBlocking(future -> {
+    workerExecutor.executeBlocking(future -> {
       cache.keySet().removeIf(multiMapKey -> multiMapKey.getValue().equals(vv));
       future.complete();
     }, false, completionHandler);
