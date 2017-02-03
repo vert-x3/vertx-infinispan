@@ -1,0 +1,11 @@
+= Infinispan Cluster Manager
+
+image:https://vertx.ci.cloudbees.com/buildStatus/icon?job=vert.x3-infinispan["Build Status",link="https://vertx.ci.cloudbees.com/view/vert.x-3/job/vert.x3-infinispan/"]
+
+This is a cluster manager implementation for Vert.x that uses http://infinispan.org[Infinispan].
+
+Please see the in-source asciidoc documentation or the main documentation on the web-site for a full description
+of this component:
+
+* link:http://vertx.io/docs/vertx-infinispan/java/[web-site docs]
+* link:src/main/asciidoc/java/index.adoc[in-source docs]
