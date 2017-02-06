@@ -145,14 +145,6 @@
  * </cache-container>
  * ----
  *
- * Besides, the JGroups channel stack must include the counter and lock protocols (at or near the top of the stack):
- *
- * [source, xml]
- * ----
- * <CENTRAL_LOCK use_thread_id_for_lock_owner="false" bypass_bundling="true"/>
- * <COUNTER bypass_bundling="true"/>
- * ----
- *
  * == Configuring for Openshift 3
  *
  * In order to run a Vert.x cluster on Openshift 3, a few configuration and dependencies changes are needed.
@@ -243,9 +235,6 @@
  *   <MFC max_credits="2m"
  *        min_threshold="0.40"
  *   />
- *   <FRAG2/>
- *   <CENTRAL_LOCK use_thread_id_for_lock_owner="false" bypass_bundling="true"/>
- *   <COUNTER bypass_bundling="true"/>
  * </config>
  * ----
  *

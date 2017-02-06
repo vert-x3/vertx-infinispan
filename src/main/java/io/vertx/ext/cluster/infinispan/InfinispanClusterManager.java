@@ -47,8 +47,13 @@ import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
+import org.jgroups.JChannel;
 import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
+import org.jgroups.fork.ForkChannel;
+import org.jgroups.protocols.CENTRAL_LOCK;
+import org.jgroups.protocols.COUNTER;
+import org.jgroups.stack.Protocol;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,6 +67,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.*;
+import static org.jgroups.stack.ProtocolStack.Position.*;
 
 /**
  * @author Thomas Segismont
@@ -80,6 +86,7 @@ public class InfinispanClusterManager implements ClusterManager {
   private ClusterViewListener viewListener;
   // Guarded by this
   private Set<InfinispanAsyncMultiMap> multimaps = Collections.newSetFromMap(new WeakHashMap<>(1));
+  private ForkChannel forkChannel;
 
   public InfinispanClusterManager() {
     this.configPath = System.getProperty("vertx.infinispan.config", "infinispan.xml");
@@ -189,14 +196,29 @@ public class InfinispanClusterManager implements ClusterManager {
           cacheManager = new DefaultCacheManager(builderHolder, true);
         } catch (IOException e) {
           future.fail(e);
+          return;
         }
       }
       viewListener = new ClusterViewListener();
       cacheManager.addListener(viewListener);
       JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
-      counterService = new CounterService(transport.getChannel());
-      lockService = new LockService(transport.getChannel());
-      future.complete();
+      JChannel channel = transport.getChannel();
+      CENTRAL_LOCK centralLock = new CENTRAL_LOCK();
+      centralLock.setValue("use_thread_id_for_lock_owner", Boolean.FALSE);
+      centralLock.setBypassBundling(true);
+      COUNTER counter = new COUNTER();
+      counter.setBypassBundling(true);
+      Protocol[] protocols = new Protocol[]{centralLock, counter};
+      Class<? extends Protocol> topProtocol = channel.getProtocolStack().getTopProtocol().getClass();
+      try {
+        forkChannel = new ForkChannel(channel, "vertx-infinispan-stack", "vertx-infinispan-channel", true, ABOVE, topProtocol, protocols);
+        forkChannel.connect("ignored");
+        counterService = new CounterService(forkChannel);
+        lockService = new LockService(forkChannel);
+        future.complete();
+      } catch (Exception e) {
+        future.fail(e);
+      }
     }, false, resultHandler);
   }
 
@@ -208,6 +230,7 @@ public class InfinispanClusterManager implements ClusterManager {
         return;
       }
       active = false;
+      forkChannel.close();
       cacheManager.removeListener(viewListener);
       if (configPath != null) {
         cacheManager.stop();
