@@ -128,11 +128,15 @@
  *
  * [source, xml]
  * ----
+ * <replicated-cache name="__vertx.subs">
+ *   <expiration interval="-1"/>
+ * </replicated-cache>
+ *
  * <replicated-cache name="__vertx.haInfo">
  *   <expiration interval="-1"/>
  * </replicated-cache>
  *
- *  <distributed-cache-configuration name="__vertx.distributed.cache.config">
+ * <distributed-cache-configuration name="__vertx.distributed.cache.config">
  *   <expiration interval="-1"/>
  * </distributed-cache-configuration>
  * ----
