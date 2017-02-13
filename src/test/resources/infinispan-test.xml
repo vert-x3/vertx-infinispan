@@ -23,7 +23,7 @@
     <stack-file name="jgroups" path="jgroups-test.xml"/>
   </jgroups>
 
-  <cache-container>
+  <cache-container default-cache="__vertx.distributed.cache">
 
     <transport stack="jgroups"/>
 
@@ -37,9 +37,9 @@
       <expiration interval="-1"/>
     </replicated-cache>
 
-    <distributed-cache-configuration name="__vertx.distributed.cache.config">
+    <distributed-cache name="__vertx.distributed.cache">
       <expiration interval="-1"/>
-    </distributed-cache-configuration>
+    </distributed-cache>
 
   </cache-container>
 
