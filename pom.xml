@@ -34,7 +34,7 @@
   <properties>
     <stack.version>3.4.0-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
-    <infinispan.version>9.0.0.Beta2</infinispan.version>
+    <infinispan.version>9.0.0.CR1</infinispan.version>
   </properties>
 
   <dependencyManagement>
@@ -141,6 +141,7 @@
             <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
             <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
             <jgroups.logging.log_factory_class>io.vertx.ext.cluster.infinispan.test.JGroupsLogFactory</jgroups.logging.log_factory_class>
+            <jgroups.join_timeout>1000</jgroups.join_timeout>
           </systemPropertyVariables>
           <!-- Needs to be small enough to run in a EC2 1.7GB small instance -->
           <argLine>-Xmx1200M</argLine>
