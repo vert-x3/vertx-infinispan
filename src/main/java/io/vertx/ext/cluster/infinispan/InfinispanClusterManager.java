@@ -69,8 +69,6 @@ import static java.util.stream.Collectors.*;
 public class InfinispanClusterManager implements ClusterManager {
   private static final Logger log = LoggerFactory.getLogger(InfinispanClusterManager.class);
 
-  private static final String CONFIG_TEMPLATE = "__vertx.distributed.cache.config";
-
   private final String configPath;
 
   private Vertx vertx;
@@ -106,7 +104,7 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
-      Cache<MultiMapKey, Object> cache = cacheManager.getCache(name, CONFIG_TEMPLATE);
+      Cache<MultiMapKey, Object> cache = cacheManager.getCache(name);
       InfinispanAsyncMultiMap<K, V> asyncMultiMap = new InfinispanAsyncMultiMap<>(vertx, cache);
       synchronized (this) {
         multimaps.add(asyncMultiMap);
@@ -118,14 +116,14 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMap(String name, Handler<AsyncResult<AsyncMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
-      Cache<Object, Object> cache = cacheManager.getCache(name, CONFIG_TEMPLATE);
+      Cache<Object, Object> cache = cacheManager.getCache(name);
       future.complete(new InfinispanAsyncMap<>(vertx, cache));
     }, false, resultHandler);
   }
 
   @Override
   public <K, V> Map<K, V> getSyncMap(String name) {
-    return cacheManager.getCache(name, CONFIG_TEMPLATE);
+    return cacheManager.getCache(name);
   }
 
   @Override
