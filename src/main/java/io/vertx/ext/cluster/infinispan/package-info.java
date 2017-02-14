@@ -128,17 +128,21 @@
  *
  * [source, xml]
  * ----
- * <replicated-cache name="__vertx.subs">
- *   <expiration interval="-1"/>
- * </replicated-cache>
+ * <cache-container default-cache="__vertx.distributed.cache">
  *
- * <replicated-cache name="__vertx.haInfo">
- *   <expiration interval="-1"/>
- * </replicated-cache>
+ *   <replicated-cache name="__vertx.subs">
+ *     <expiration interval="-1"/>
+ *   </replicated-cache>
  *
- * <distributed-cache-configuration name="__vertx.distributed.cache.config">
- *   <expiration interval="-1"/>
- * </distributed-cache-configuration>
+ *   <replicated-cache name="__vertx.haInfo">
+ *     <expiration interval="-1"/>
+ *   </replicated-cache>
+ *
+ *   <distributed-cache name="__vertx.distributed.cache">
+ *     <expiration interval="-1"/>
+ *   </distributed-cache>
+ *
+ * </cache-container>
  * ----
  *
  * Besides, the JGroups channel stack must include the counter and lock protocols (at or near the top of the stack):
