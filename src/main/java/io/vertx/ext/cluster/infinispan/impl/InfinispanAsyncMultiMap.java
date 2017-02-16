@@ -134,7 +134,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     workerExecutor.executeBlocking(future -> {
       cache.keySet().removeIf(multiMapKey -> multiMapKey.getValue().equals(vv));
       future.complete();
-    }, false, completionHandler);
+    }, completionHandler);
   }
 
   public void clearCache() {
