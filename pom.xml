@@ -34,7 +34,7 @@
   <properties>
     <stack.version>3.4.0-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
-    <infinispan.version>9.0.0.CR1</infinispan.version>
+    <infinispan.version>9.0.0.CR2</infinispan.version>
   </properties>
 
   <dependencyManagement>
