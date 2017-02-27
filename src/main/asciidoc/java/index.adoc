@@ -246,6 +246,7 @@ Then override the default JGroups config so that `KUBE_PING` becomes the discove
   <MFC max_credits="2m"
 *        min_threshold="0.40"
 *   />
+  <FRAG3/>
 </config>
 ----
 

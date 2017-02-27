@@ -235,6 +235,7 @@
  *   <MFC max_credits="2m"
  *        min_threshold="0.40"
  *   />
+ *   <FRAG3/>
  * </config>
  * ----
  *
