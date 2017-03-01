@@ -17,6 +17,7 @@
 package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.eventbus.impl.clustered.ClusterNodeInfo;
+import io.vertx.core.net.impl.ServerID;
 import org.infinispan.commons.marshall.Externalizer;
 import org.infinispan.commons.marshall.SerializeWith;
 
@@ -62,13 +63,13 @@ public class InfinispanClusterNodeInfo {
     @Override
     public void writeObject(ObjectOutput output, InfinispanClusterNodeInfo object) throws IOException {
       output.writeUTF(object.clusterNodeInfo.nodeId);
-      output.writeUTF(object.clusterNodeInfo.host);
-      output.writeInt(object.clusterNodeInfo.port);
+      output.writeInt(object.clusterNodeInfo.serverID.port);
+      output.writeUTF(object.clusterNodeInfo.serverID.host);
     }
 
     @Override
     public InfinispanClusterNodeInfo readObject(ObjectInput input) throws IOException, ClassNotFoundException {
-      ClusterNodeInfo clusterNodeInfo = new ClusterNodeInfo(input.readUTF(), input.readUTF(), input.readInt());
+      ClusterNodeInfo clusterNodeInfo = new ClusterNodeInfo(input.readUTF(), new ServerID(input.readInt(), input.readUTF()));
       return new InfinispanClusterNodeInfo(clusterNodeInfo);
     }
   }

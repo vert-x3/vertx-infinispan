@@ -130,11 +130,11 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void removeAllForValue(V v, Handler<AsyncResult<Void>> completionHandler) {
-    removeAll(v::equals, completionHandler);
+    removeAllMatching(v::equals, completionHandler);
   }
 
   @Override
-  public void removeAll(Predicate<V> p, Handler<AsyncResult<Void>> completionHandler) {
+  public void removeAllMatching(Predicate<V> p, Handler<AsyncResult<Void>> completionHandler) {
     workerExecutor.executeBlocking(future -> {
       cache.keySet().removeIf(multiMapKey -> p.test(DataConverter.fromCachedObject(multiMapKey.getValue())));
       future.complete();
