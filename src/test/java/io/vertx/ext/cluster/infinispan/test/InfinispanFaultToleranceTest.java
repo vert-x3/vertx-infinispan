@@ -36,6 +36,12 @@ import java.util.concurrent.TimeUnit;
 public class InfinispanFaultToleranceTest extends FaultToleranceTest {
 
   @Override
+  public void setUp() throws Exception {
+    timeoutMs = 4 * timeoutMs;
+    super.setUp();
+  }
+
+  @Override
   protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
     CountDownLatch latch = new CountDownLatch(1);
     Future<Vertx> future = Future.future();
