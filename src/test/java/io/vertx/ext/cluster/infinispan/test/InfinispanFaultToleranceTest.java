@@ -68,6 +68,8 @@ public class InfinispanFaultToleranceTest extends FaultToleranceTest {
 
   @Override
   protected List<String> getExternalNodeSystemProperties() {
-    return Arrays.asList("-Djava.net.preferIPv4Stack=true", "-Djgroups.join_timeout=1000", "-Dvertx.infinispan.config=infinispan-test.xml");
+    return Arrays.asList("-Djava.net.preferIPv4Stack=true", "-Djgroups.join_timeout=1000", "-Dvertx.infinispan.config=infinispan-test.xml",
+      "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+      "-Djgroups.logging.log_factory_class=io.vertx.ext.cluster.infinispan.test.JGroupsLogFactory");
   }
 }

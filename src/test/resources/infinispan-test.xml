@@ -20,7 +20,7 @@
             xmlns="urn:infinispan:config:9.0">
 
   <jgroups>
-    <stack-file name="jgroups" path="jgroups.xml"/>
+    <stack-file name="jgroups" path="jgroups-test.xml"/>
   </jgroups>
 
   <cache-container default-cache="__vertx.distributed.cache">
