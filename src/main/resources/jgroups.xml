@@ -45,13 +45,13 @@
   />
   <VERIFY_SUSPECT timeout="5000"/>
   <pbcast.NAKACK2 use_mcast_xmit="false"
-                  xmit_interval="1000"
+                  xmit_interval="100"
                   xmit_table_num_rows="50"
                   xmit_table_msgs_per_row="1024"
                   xmit_table_max_compaction_time="30000"
                   resend_last_seqno="true"
   />
-  <UNICAST3 xmit_interval="500"
+  <UNICAST3 xmit_interval="100"
             xmit_table_num_rows="50"
             xmit_table_msgs_per_row="1024"
             xmit_table_max_compaction_time="30000"
@@ -62,6 +62,7 @@
                  max_bytes="1M"
   />
   <pbcast.GMS print_local_addr="false"
+              install_view_locally_first="true"
               join_timeout="${jgroups.join_timeout:5000}"
   />
   <MFC max_credits="2m"
