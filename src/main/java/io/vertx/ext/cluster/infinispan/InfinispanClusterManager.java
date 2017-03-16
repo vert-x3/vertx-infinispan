@@ -75,7 +75,15 @@ import static org.jgroups.stack.ProtocolStack.Position.*;
 public class InfinispanClusterManager implements ClusterManager {
   private static final Logger log = LoggerFactory.getLogger(InfinispanClusterManager.class);
 
-  private final String configPath;
+  private static final String VERTX_INFINISPAN_CONFIG_PROP_NAME = "vertx.infinispan.config";
+  private static final String INFINISPAN_XML = "infinispan.xml";
+  private static final String DEFAULT_INFINISPAN_XML = "default-infinispan.xml";
+  private static final String VERTX_JGROUPS_CONFIG_PROP_NAME = "vertx.jgroups.config";
+  private static final String JGROUPS_XML = "jgroups.xml";
+
+  private final String ispnConfigPath;
+  private final String jgroupsConfigPath;
+  private final boolean userProvidedCacheManager;
 
   private Vertx vertx;
   private DefaultCacheManager cacheManager;
@@ -88,19 +96,27 @@ public class InfinispanClusterManager implements ClusterManager {
   private Set<InfinispanAsyncMultiMap> multimaps = Collections.newSetFromMap(new WeakHashMap<>(1));
   private ForkChannel forkChannel;
 
+  /**
+   * Creates a new cluster manager configured with {@code infinispan.xml} and {@code jgroups.xml} files.
+   */
   public InfinispanClusterManager() {
-    this.configPath = System.getProperty("vertx.infinispan.config", "infinispan.xml");
+    this.ispnConfigPath = System.getProperty(VERTX_INFINISPAN_CONFIG_PROP_NAME, INFINISPAN_XML);
+    this.jgroupsConfigPath = System.getProperty(VERTX_JGROUPS_CONFIG_PROP_NAME, JGROUPS_XML);
+    userProvidedCacheManager = false;
   }
 
-  public InfinispanClusterManager(String configPath) {
-    Objects.requireNonNull(configPath, "configPath");
-    this.configPath = configPath;
-  }
-
+  /**
+   * Creates a new cluster manager with an existing {@link DefaultCacheManager}.
+   * It is your responsibility to start/stop the cache manager when the Vert.x instance joins/leaves the cluster.
+   *
+   * @param cacheManager the existing cache manager
+   */
   public InfinispanClusterManager(DefaultCacheManager cacheManager) {
     Objects.requireNonNull(cacheManager, "cacheManager");
     this.cacheManager = cacheManager;
-    configPath = null;
+    ispnConfigPath = null;
+    jgroupsConfigPath = null;
+    userProvidedCacheManager = true;
   }
 
   @Override
@@ -182,21 +198,36 @@ public class InfinispanClusterManager implements ClusterManager {
         return;
       }
       active = true;
-      if (cacheManager == null) {
+      if (!userProvidedCacheManager) {
+        InputStream ispnConfigStream = null;
         try {
           FileLookup fileLookup = FileLookupFactory.newInstance();
-          InputStream inputStream = fileLookup.lookupFileStrict(configPath, Thread.currentThread().getContextClassLoader());
-          ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(inputStream);
+
+          ispnConfigStream = fileLookup.lookupFile(ispnConfigPath, getCTCCL());
+          if (ispnConfigStream == null) {
+            log.warn("Cannot find Infinispan config '" + ispnConfigPath + "', using default");
+            ispnConfigStream = fileLookup.lookupFileStrict(DEFAULT_INFINISPAN_XML, getCTCCL());
+          }
+          ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(ispnConfigStream);
           // Workaround Launcher in fatjar issue (context classloader may be null)
-          ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+          ClassLoader classLoader = getCTCCL();
           if (classLoader == null) {
             classLoader = getClass().getClassLoader();
           }
           builderHolder.getGlobalConfigurationBuilder().classLoader(classLoader);
+
+          if (fileLookup.lookupFileLocation(jgroupsConfigPath, getCTCCL()) != null) {
+            log.warn("Forcing JGroups config to '" + jgroupsConfigPath + "'");
+            builderHolder.getGlobalConfigurationBuilder().transport().defaultTransport()
+              .addProperty("configurationFile", jgroupsConfigPath);
+          }
+
           cacheManager = new DefaultCacheManager(builderHolder, true);
         } catch (IOException e) {
           future.fail(e);
           return;
+        } finally {
+          safeClose(ispnConfigStream);
         }
       }
       viewListener = new ClusterViewListener();
@@ -222,6 +253,19 @@ public class InfinispanClusterManager implements ClusterManager {
     }, false, resultHandler);
   }
 
+  private ClassLoader getCTCCL() {
+    return Thread.currentThread().getContextClassLoader();
+  }
+
+  private void safeClose(InputStream is) {
+    if (is != null) {
+      try {
+        is.close();
+      } catch (IOException ignored) {
+      }
+    }
+  }
+
   @Override
   public void leave(Handler<AsyncResult<Void>> resultHandler) {
     vertx.executeBlocking(future -> {
@@ -232,7 +276,7 @@ public class InfinispanClusterManager implements ClusterManager {
       active = false;
       forkChannel.close();
       cacheManager.removeListener(viewListener);
-      if (configPath != null) {
+      if (!userProvidedCacheManager) {
         cacheManager.stop();
       }
       future.complete();

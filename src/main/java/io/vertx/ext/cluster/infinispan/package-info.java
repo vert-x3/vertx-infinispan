@@ -57,35 +57,32 @@
  *
  * [source,$lang]
  * ----
- * {@link examples.Examples#example1()}
+ * {@link examples.Examples#createClusterManagerProgramatically()}
  * ----
  *
  * == Configuring this cluster manager
  *
- * Usually the cluster manager is configured by two files packaged inside the jar:
+ * The default cluster manager configuration can be modified with `infinispan.xml` and/or `jgroups.xml` files.
+ * The former configures the data grid, the latter group management and member discovery.
  *
- * - https://github.com/vert-x3/vertx-infinispan/blob/master/src/main/resources/infinispan.xml[`infinispan.xml`]
- * - https://github.com/vert-x3/vertx-infinispan/blob/master/src/main/resources/jgroups.xml[`jgroups.xml`]
- *
- * If you want to override one or both of them, place a file with the same name on your classpath and it
- * will be used instead. If you want to embed your custom file in a fat jar, it must be located at the root of the
- * fat jar. If it's an external file, the **directory** containing the file must be added to the classpath. For
+ * You can place one or both of them on your classpath.
+ * If you want to embed your custom file in a fat jar, it must be located at the root of the fat jar.
+ * If it's an external file, the **directory** containing the file must be added to the classpath. For
  * example, if you are using the _launcher_ class from Vert.x, the classpath enhancement can be done as follows:
  *
- * [source]
+ * [source,shell]
  * ----
- * # If the infinispan.xml is in the current directory:
- * java -jar ... -cp . -cluster
- * vertx run MyVerticle -cp . -cluster
+ * # If infinispan.xml and/or jgroups.xml files are in the current directory:
+ * java -jar my-app.jar -cp . -cluster
  *
- * # If the infinispan.xml is in the conf directory
- * java -jar ... -cp conf -cluster
+ * # If infinispan.xml and/or jgroups.xml files are in the conf directory:
+ * java -jar my-app.jar -cp conf -cluster
  * ----
  *
- * Another way to override the `infinispan.xml` configuration is by providing the system property `vertx.infinispan.config` with a
- * location:
+ * Another way to override the configuration is by providing the file locations via system properties:
+ * `vertx.infinispan.config` and/or `vertx.jgroups.config`.
  *
- * [source]
+ * [source,shell]
  * ----
  * # Use a cluster configuration located in an external file
  * java -Dvertx.infinispan.config=./config/my-infinispan.xml -jar ... -cluster
@@ -96,22 +93,18 @@
  *
  * The cluster manager will search for the file in classpath first, and fallback to the filesystem.
  *
- * The `vertx.infinispan.config` system property, when present, overrides any `infinispan.xml` on the classpath.
+ * The system properties, when present, override any `infinispan.xml` or `jgroups.xml` on the classpath.
  *
  * The xml files are Infinispan and JGroups configuration files and are described in detail in the documentation on the Infinispan and JGroups web-sites.
  *
- * You can also specify configuration programmatically if embedding:
+ * IMPORTANT: if a `jgroups.xml` file is on the classpath or if you set the `vertx.jgroups.config` system property,
+ * it will override any JGroups `stack-file` path defined in the Infinispan configuration file.
  *
- * [source,$lang]
- * ----
- * {@link examples.Examples#example2()}
- * ----
- *
- * JGroups supports several different transports including multicast and TCP. The default configuration uses
- * multicast for discovery so you must have multicast enabled on your network for this to work.
+ * The default JGroups configuration uses multicast for discovery and TCP for group management.
+ * Make sure multicast is enabled on your network for this to work.
  *
  * For full documentation on how to configure the transport differently or use a different transport please consult the
- * JGroups documentation.
+ * Infinispan / JGroups documentations.
  *
  * == Using an existing Infinispan Cache Manager
  *
@@ -119,14 +112,14 @@
  *
  * [source,$lang]
  * ----
- * {@link examples.Examples#example3(org.infinispan.manager.DefaultCacheManager)}
+ * {@link examples.Examples#useExistingCacheManager(org.infinispan.manager.DefaultCacheManager)}
  * ----
  *
  * In this case, vert.x is not the cache manager owner and so do not shut it down on close.
  *
  * Notice that the custom Infinispan instance need to be configured with:
  *
- * [source, xml]
+ * [source,xml]
  * ----
  * <cache-container default-cache="__vertx.distributed.cache">
  *
@@ -147,122 +140,65 @@
  *
  * == Configuring for Openshift 3
  *
- * In order to run a Vert.x cluster on Openshift 3, a few configuration and dependencies changes are needed.
+ * On Openshift 3, JGroups should be configured to use the `KUBE_PING` protocol.
  *
- * First, add the JGroups `KUBE_PING` protocol JAR to the stack.
+ * First, add the `org.infinispan:infinispan-cloud:${infinispan.version}` dependency to your project.
+ * With Maven it looks like:
  *
- * [source, xml]
+ * [source,xml]
  * ----
  * <dependency>
- *   <groupId>org.jgroups.kubernetes</groupId>
- *   <artifactId>kubernetes</artifactId>
- *   <version>0.9.0</version>
+ *   <groupId>org.infinispan</groupId>
+ *   <artifactId>infinispan-cloud</artifactId>
+ *   <version>${infinispan.version}</version>
  *   <exclusions>
- *     <exclusion>                                          <1>
- *       <artifactId>undertow-core</artifactId>
+ *     <exclusion>
+ *       <groupId>org.jgroups</groupId>                <1>
+ *       <artifactId>jgroups</artifactId>
+ *     </exclusion>
+ *     <exclusion>
+ *       <artifactId>undertow-core</artifactId>        <2>
  *       <groupId>io.undertow</groupId>
  *     </exclusion>
  *   </exclusions>
  * </dependency>
  * ----
- * <1> avoid extra dependencies, `KUBE_PING` works fine with the JDK's Http server
+ * <1> make sure to use the `infinispan-core` JGroups version
+ * <2> avoid extra dependencies, `KUBE_PING` works fine with the JDK's Http server
  *
- * Then override the default JGroups config so that `KUBE_PING` becomes the discovery protocol.
+ * Then, set the `vertx.jgroups.config` system property to `default-configs/default-jgroups-kubernetes.xml`.
  *
- * [source, xml]
+ * [source,shell]
  * ----
- * <config xmlns="urn:org:jgroups"
- *         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
- *         xsi:schemaLocation="urn:org:jgroups http://www.jgroups.org/schema/JGroups-3.6.xsd">
- *
- *   <TCP bind_addr="${jgroups.tcp.address:match-interface:eth.*}"
- *        bind_port="${jgroups.tcp.port:7800}"
- *        enable_diagnostics="false"
- *        thread_naming_pattern="pl"
- *        send_buf_size="640k"
- *        sock_conn_timeout="300"
- *        bundler_type="transfer-queue"
- *
- *        thread_pool.min_threads="${jgroups.thread_pool.min_threads:2}"
- *        thread_pool.max_threads="${jgroups.thread_pool.max_threads:30}"
- *        thread_pool.keep_alive_time="60000"
- *        thread_pool.queue_enabled="false"
- *
- *        internal_thread_pool.min_threads="${jgroups.internal_thread_pool.min_threads:5}"
- *        internal_thread_pool.max_threads="${jgroups.internal_thread_pool.max_threads:20}"
- *        internal_thread_pool.keep_alive_time="60000"
- *        internal_thread_pool.queue_enabled="true"
- *        internal_thread_pool.queue_max_size="500"
- *
- *        oob_thread_pool.min_threads="${jgroups.oob_thread_pool.min_threads:20}"
- *        oob_thread_pool.max_threads="${jgroups.oob_thread_pool.max_threads:200}"
- *        oob_thread_pool.keep_alive_time="60000"
- *        oob_thread_pool.queue_enabled="false"
- *   />
- *   <kubernetes.KUBE_PING
- *   />
- *   <MERGE3 min_interval="10000"
- *           max_interval="30000"
- *   />
- *   <FD_SOCK/>
- *   <FD_ALL timeout="60000"
- *           interval="15000"
- *           timeout_check_interval="5000"
- *   />
- *   <VERIFY_SUSPECT timeout="5000"/>
- *   <pbcast.NAKACK2 use_mcast_xmit="false"
- *                   xmit_interval="1000"
- *                   xmit_table_num_rows="50"
- *                   xmit_table_msgs_per_row="1024"
- *                   xmit_table_max_compaction_time="30000"
- *                   max_msg_batch_size="100"
- *                   resend_last_seqno="true"
- *   />
- *   <UNICAST3 xmit_interval="500"
- *             xmit_table_num_rows="50"
- *             xmit_table_msgs_per_row="1024"
- *             xmit_table_max_compaction_time="30000"
- *             max_msg_batch_size="100"
- *             conn_expiry_timeout="0"
- *   />
- *   <pbcast.STABLE stability_delay="500"
- *                  desired_avg_gossip="5000"
- *                  max_bytes="1M"
- *   />
- *   <pbcast.GMS print_local_addr="false"
- *               join_timeout="${jgroups.join_timeout:5000}"
- *   />
- *   <MFC max_credits="2m"
- *        min_threshold="0.40"
- *   />
- *   <FRAG3/>
- * </config>
+ * -Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml
  * ----
+ *
+ * This JGroups stack file is located in the `infinispan-cloud` JAR and preconfigured for Kubernetes/Openshift3.
  *
  * `KUBE_PING` listens to requests on port `8888` by default, so make sure to declare it when building the container image.
  *
- * [source, Dockerfile]
+ * [source,Dockerfile]
  * ----
  * EXPOSE 8888
  * ----
  *
  * Also, set the project namespace as the scope for discovery.
  *
- * [source, Dockerfile]
+ * [source,Dockerfile]
  * ----
  * ENV OPENSHIFT_KUBE_PING_NAMESPACE my-openshift3-project
  * ----
  *
  * Then, force usage of IPv4 in the JVM with a system property.
  *
- * [source, shell]
+ * [source,shell]
  * ----
  * -Djava.net.preferIPv4Stack=true
  * ----
  *
  * Eventually, the setup needs a service account.
  *
- * [source, shell]
+ * [source,shell]
  * ----
  * oc policy add-role-to-user view system:serviceaccount:$(oc project -q):default -n $(oc project -q)
  * ----
@@ -274,7 +210,7 @@
  *
  * Make sure to start the Java Virtual Machines with those system properties:
  *
- * [source, shell]
+ * [source,shell]
  * ----
  * -Djava.net.preferIPv4Stack=true -Djgroups.tcp.address=NON_LOOPBACK
  * ----
