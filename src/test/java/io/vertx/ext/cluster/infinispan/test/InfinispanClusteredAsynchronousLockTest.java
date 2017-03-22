@@ -57,7 +57,7 @@ public class InfinispanClusteredAsynchronousLockTest extends ClusteredAsynchrono
 
   @Override
   protected ClusterManager getClusterManager() {
-    return new InfinispanClusterManager("infinispan-test.xml");
+    return new InfinispanClusterManager();
   }
 
   @Override

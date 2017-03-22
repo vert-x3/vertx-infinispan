@@ -27,8 +27,7 @@ import org.infinispan.manager.DefaultCacheManager;
  */
 public class Examples {
 
-  public void example1() {
-
+  public void createClusterManagerProgramatically() {
     ClusterManager mgr = new InfinispanClusterManager();
 
     VertxOptions options = new VertxOptions().setClusterManager(mgr);
@@ -42,24 +41,11 @@ public class Examples {
     });
   }
 
-  public void example2() {
-
-    ClusterManager mgr = new InfinispanClusterManager("custom-infinispan.xml");
-
-    VertxOptions options = new VertxOptions().setClusterManager(mgr);
-
-    Vertx.clusteredVertx(options, res -> {
-      if (res.succeeded()) {
-        Vertx vertx = res.result();
-      } else {
-        // failed!
-      }
-    });
-  }
-
-  public void example3(DefaultCacheManager cacheManager) {
+  public void useExistingCacheManager(DefaultCacheManager cacheManager) {
     ClusterManager mgr = new InfinispanClusterManager(cacheManager);
+
     VertxOptions options = new VertxOptions().setClusterManager(mgr);
+
     Vertx.clusteredVertx(options, res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();

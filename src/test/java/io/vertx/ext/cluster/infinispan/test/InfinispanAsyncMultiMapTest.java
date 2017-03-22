@@ -55,6 +55,6 @@ public class InfinispanAsyncMultiMapTest extends AsyncMultiMapTest {
 
   @Override
   protected ClusterManager getClusterManager() {
-    return new InfinispanClusterManager("infinispan-test.xml");
+    return new InfinispanClusterManager();
   }
 }
