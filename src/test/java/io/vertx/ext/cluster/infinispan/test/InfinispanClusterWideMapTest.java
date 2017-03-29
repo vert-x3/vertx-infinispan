@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanClusterWideMapTestDifferentNodes extends ClusterWideMapTestDifferentNodes {
+public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNodes {
 
   @Override
   protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
