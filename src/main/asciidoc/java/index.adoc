@@ -145,7 +145,7 @@ Notice that the custom Infinispan instance need to be configured with:
 
 On Openshift 3, JGroups should be configured to use the `KUBE_PING` protocol.
 
-First, add the `org.infinispan:infinispan-cloud:9.0.0.CR4` dependency to your project.
+First, add the `org.infinispan:infinispan-cloud:9.0.0.Final` dependency to your project.
 With Maven it looks like:
 
 [source,xml]
@@ -153,7 +153,7 @@ With Maven it looks like:
 <dependency>
   <groupId>org.infinispan</groupId>
   <artifactId>infinispan-cloud</artifactId>
-  <version>9.0.0.CR4</version>
+  <version>9.0.0.Final</version>
   <exclusions>
     <exclusion>
       <groupId>org.jgroups</groupId>                <1>
