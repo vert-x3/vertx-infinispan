@@ -147,7 +147,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     nearCache.clear();
   }
 
-  @Listener(clustered = true, observation = POST, sync = false)
+  @Listener(clustered = true, observation = POST)
   private class EntryListener {
     @CacheEntryCreated
     public void entryCreated(CacheEntryCreatedEvent<MultiMapKey, Object> event) {
