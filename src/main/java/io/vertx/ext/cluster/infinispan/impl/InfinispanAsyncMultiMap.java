@@ -21,6 +21,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.ConcurrentHashSet;
+import io.vertx.core.impl.ContextImpl;
 import io.vertx.core.impl.TaskQueue;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
@@ -38,14 +39,15 @@ import org.infinispan.stream.CacheCollectors;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -60,14 +62,12 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
   private final VertxInternal vertx;
   private final Cache<MultiMapKey, Object> cache;
   private final ConcurrentMap<K, ChoosableSet<V>> nearCache;
-  private final AtomicInteger getInProgressCount;
   private final TaskQueue taskQueue;
 
   public InfinispanAsyncMultiMap(Vertx vertx, Cache<MultiMapKey, Object> cache) {
     this.vertx = (VertxInternal) vertx;
     this.cache = cache;
     nearCache = new ConcurrentHashMap<>();
-    getInProgressCount = new AtomicInteger();
     cache.addListener(new EntryListener());
     taskQueue = new TaskQueue();
   }
@@ -84,40 +84,79 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void get(K k, Handler<AsyncResult<ChoosableIterable<V>>> resultHandler) {
-    ChoosableSet<V> entries = nearCache.get(k);
-    if (entries != null && entries.isInitialised() && getInProgressCount.get() == 0) {
-      resultHandler.handle(Future.succeededFuture(entries));
-    } else {
-      getInProgressCount.incrementAndGet();
-      vertx.getOrCreateContext().<ChoosableIterable<V>>executeBlocking(fut -> {
-        List<MultiMapKey> collect = cache.keySet().parallelStream()
-          .filter(new KeyEqualsPredicate(DataConverter.toCachedObject(k)))
-          .collect(CacheCollectors.serializableCollector(Collectors::toList));
-        Collection<V> entries2 = collect.stream()
-          .map(mmk -> DataConverter.<V>fromCachedObject(mmk.getValue()))
-          .collect(toList());
-        ChoosableSet<V> sids;
-        if (entries2 != null) {
-          sids = new ChoosableSet<>(entries2.size());
-          for (V hid : entries2) {
-            sids.add(hid);
-          }
-        } else {
-          sids = new ChoosableSet<>(0);
+    ContextImpl context = vertx.getOrCreateContext();
+    @SuppressWarnings("unchecked")
+    Queue<GetRequest<K, V>> getRequests = (Queue<GetRequest<K, V>>) context.contextData().computeIfAbsent(this, ctx -> new ArrayDeque<>());
+    synchronized (getRequests) {
+      ChoosableSet<V> entries = nearCache.get(k);
+      if (entries != null && entries.isInitialised() && getRequests.isEmpty()) {
+        context.runOnContext(v -> {
+          resultHandler.handle(Future.succeededFuture(entries));
+        });
+      } else {
+        getRequests.add(new GetRequest<>(k, resultHandler));
+        if (getRequests.size() == 1) {
+          dequeueGet(context, getRequests);
         }
-        ChoosableSet<V> prev = (sids.isEmpty()) ? null : nearCache.putIfAbsent(k, sids);
-        if (prev != null) {
-          // Merge them
-          prev.merge(sids);
-          sids = prev;
-        }
-        sids.setInitialised();
-        fut.complete(sids);
-      }, taskQueue, res -> {
-        getInProgressCount.decrementAndGet();
-        resultHandler.handle(res);
-      });
+      }
     }
+  }
+
+  private void dequeueGet(ContextImpl context, Queue<GetRequest<K, V>> getRequests) {
+    GetRequest<K, V> getRequest;
+    for (; ; ) {
+      getRequest = getRequests.peek();
+      ChoosableSet<V> entries = nearCache.get(getRequest.key);
+      if (entries != null && entries.isInitialised()) {
+        Handler<AsyncResult<ChoosableIterable<V>>> handler = getRequest.handler;
+        context.runOnContext(v -> {
+          handler.handle(Future.succeededFuture(entries));
+        });
+        getRequests.remove();
+        if (getRequests.isEmpty()) {
+          return;
+        }
+      } else {
+        break;
+      }
+    }
+    K key = getRequest.key;
+    Handler<AsyncResult<ChoosableIterable<V>>> handler = getRequest.handler;
+    context.<ChoosableIterable<V>>executeBlocking(fut -> {
+      List<MultiMapKey> collect = cache.keySet().parallelStream()
+        .filter(new KeyEqualsPredicate(DataConverter.toCachedObject(key)))
+        .collect(CacheCollectors.serializableCollector(Collectors::toList));
+      Collection<V> entries = collect.stream()
+        .map(mmk -> DataConverter.<V>fromCachedObject(mmk.getValue()))
+        .collect(toList());
+      ChoosableSet<V> sids;
+      if (entries != null) {
+        sids = new ChoosableSet<>(entries.size());
+        for (V hid : entries) {
+          sids.add(hid);
+        }
+      } else {
+        sids = new ChoosableSet<>(0);
+      }
+      ChoosableSet<V> prev = (sids.isEmpty()) ? null : nearCache.putIfAbsent(key, sids);
+      if (prev != null) {
+        // Merge them
+        prev.merge(sids);
+        sids = prev;
+      }
+      sids.setInitialised();
+      fut.complete(sids);
+    }, taskQueue, res -> {
+      synchronized (getRequests) {
+        context.runOnContext(v -> {
+          handler.handle(res);
+        });
+        getRequests.remove();
+        if (!getRequests.isEmpty()) {
+          dequeueGet(context, getRequests);
+        }
+      }
+    });
   }
 
   @Override
@@ -332,6 +371,16 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
       } else {
         return null;
       }
+    }
+  }
+
+  private static class GetRequest<K, V> {
+    final K key;
+    final Handler<AsyncResult<ChoosableIterable<V>>> handler;
+
+    GetRequest(K key, Handler<AsyncResult<ChoosableIterable<V>>> handler) {
+      this.key = key;
+      this.handler = handler;
     }
   }
 }
