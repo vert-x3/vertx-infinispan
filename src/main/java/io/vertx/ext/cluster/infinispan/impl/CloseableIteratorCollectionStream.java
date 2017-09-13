@@ -148,9 +148,13 @@ public class CloseableIteratorCollectionStream<IN, OUT> implements ReadStream<OU
     }
     if (queue.isEmpty()) {
       close();
-      if (endHandler != null) {
-        endHandler.handle(null);
-      }
+      context.runOnContext(v -> {
+        synchronized (this) {
+          if (endHandler != null) {
+            endHandler.handle(null);
+          }
+        }
+      });
       return;
     }
     context.runOnContext(v -> emitQueued());
