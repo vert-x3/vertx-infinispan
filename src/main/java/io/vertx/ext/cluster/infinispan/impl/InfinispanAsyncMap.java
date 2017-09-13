@@ -22,7 +22,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
-import io.vertx.core.shareddata.AsyncMapStream;
+import io.vertx.core.streams.ReadStream;
 import org.infinispan.AdvancedCache;
 import org.infinispan.Cache;
 import org.infinispan.context.Flag;
@@ -191,17 +191,17 @@ public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
   }
 
   @Override
-  public AsyncMapStream<K> keyStream() {
+  public ReadStream<K> keyStream() {
     return new CloseableIteratorCollectionStream<>(vertx.getOrCreateContext(), cache::keySet, DataConverter::fromCachedObject);
   }
 
   @Override
-  public AsyncMapStream<V> valueStream() {
+  public ReadStream<V> valueStream() {
     return new CloseableIteratorCollectionStream<>(vertx.getOrCreateContext(), cache::values, DataConverter::fromCachedObject);
   }
 
   @Override
-  public AsyncMapStream<Entry<K, V>> entryStream() {
+  public ReadStream<Entry<K, V>> entryStream() {
     return new CloseableIteratorCollectionStream<>(vertx.getOrCreateContext(), cache::entrySet, cacheEntry -> {
       K key = DataConverter.fromCachedObject(cacheEntry.getKey());
       V value = DataConverter.fromCachedObject(cacheEntry.getValue());
