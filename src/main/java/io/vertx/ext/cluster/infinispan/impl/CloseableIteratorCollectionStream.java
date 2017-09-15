@@ -23,7 +23,9 @@ import org.infinispan.commons.util.CloseableIterator;
 import org.infinispan.commons.util.CloseableIteratorCollection;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -143,21 +145,30 @@ public class CloseableIteratorCollectionStream<IN, OUT> implements ReadStream<OU
       context.runOnContext(v -> emitQueued());
       return;
     }
-    for (int i = 0; i < BATCH_SIZE && iterator.hasNext(); i++) {
-      queue.add(iterator.next());
-    }
-    if (queue.isEmpty()) {
-      close();
-      context.runOnContext(v -> {
-        synchronized (this) {
-          if (endHandler != null) {
-            endHandler.handle(null);
+    context.<List<IN>>executeBlocking(fut -> {
+      List<IN> batch = new ArrayList<>(BATCH_SIZE);
+      for (int i = 0; i < BATCH_SIZE && iterator.hasNext(); i++) {
+        batch.add(iterator.next());
+      }
+      fut.complete(batch);
+    }, false, ar -> {
+      synchronized (this) {
+        if (ar.succeeded()) {
+          queue.addAll(ar.result());
+          if (queue.isEmpty()) {
+            close();
+            if (endHandler != null) {
+              endHandler.handle(null);
+            }
+          } else {
+            emitQueued();
           }
+        } else {
+          close();
+          handleException(ar.cause());
         }
-      });
-      return;
-    }
-    context.runOnContext(v -> emitQueued());
+      }
+    });
   }
 
   private void handleException(Throwable cause) {
