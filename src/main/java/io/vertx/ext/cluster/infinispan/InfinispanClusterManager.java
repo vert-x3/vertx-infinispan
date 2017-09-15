@@ -29,7 +29,7 @@ import io.vertx.core.shareddata.Lock;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.spi.cluster.NodeListener;
-import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMap;
+import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMapImpl;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap.MultiMapKey;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsCounter;
@@ -140,7 +140,7 @@ public class InfinispanClusterManager implements ClusterManager {
   public <K, V> void getAsyncMap(String name, Handler<AsyncResult<AsyncMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
       Cache<Object, Object> cache = cacheManager.getCache(name);
-      future.complete(new InfinispanAsyncMap<>(vertx, cache));
+      future.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
     }, false, resultHandler);
   }
 

@@ -18,8 +18,8 @@
 
   <parent>
     <groupId>io.vertx</groupId>
-    <artifactId>vertx-parent</artifactId>
-    <version>10</version>
+    <artifactId>vertx-ext-parent</artifactId>
+    <version>26</version>
   </parent>
 
   <artifactId>vertx-infinispan</artifactId>
@@ -66,6 +66,17 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-codetrans</artifactId>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-rx-java</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-rx-java2</artifactId>
+      <optional>true</optional>
     </dependency>
 
     <dependency>

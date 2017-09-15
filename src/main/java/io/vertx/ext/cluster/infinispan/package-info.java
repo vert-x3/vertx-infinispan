@@ -330,6 +330,8 @@
  *
  */
 @Document(fileName = "index.adoc")
+@ModuleGen(name = "vertx-infinispan", groupPackage = "io.vertx")
 package io.vertx.ext.cluster.infinispan;
 
+import io.vertx.codegen.annotations.ModuleGen;
 import io.vertx.docgen.Document;
