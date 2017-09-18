@@ -78,7 +78,7 @@ public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNod
       List<JsonObject> keys = new ArrayList<>();
       ReadStream<JsonObject> stream = InfinispanAsyncMap.<JsonObject, Buffer>unwrap(asyncMap).keyStream();
       long pause = 500;
-      Long start = System.nanoTime();
+      long start = System.nanoTime();
       stream.endHandler(end -> {
         assertEquals(map.size(), keys.size());
         assertTrue(keys.containsAll(map.keySet()));
@@ -111,7 +111,7 @@ public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNod
       ReadStream<Buffer> stream = InfinispanAsyncMap.<JsonObject, Buffer>unwrap(asyncMap).valueStream();
       AtomicInteger idx = new AtomicInteger();
       long pause = 500;
-      Long start = System.nanoTime();
+      long start = System.nanoTime();
       stream.endHandler(end -> {
         assertEquals(map.size(), values.size());
         assertTrue(values.containsAll(map.values()));
@@ -145,7 +145,7 @@ public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNod
       List<Map.Entry<JsonObject, Buffer>> entries = new ArrayList<>();
       ReadStream<Map.Entry<JsonObject, Buffer>> stream = InfinispanAsyncMap.<JsonObject, Buffer>unwrap(asyncMap).entryStream();
       long pause = 500;
-      Long start = System.nanoTime();
+      long start = System.nanoTime();
       stream.endHandler(end -> {
         assertEquals(map.size(), entries.size());
         assertTrue(entries.containsAll(map.entrySet()));
