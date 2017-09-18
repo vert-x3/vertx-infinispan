@@ -37,6 +37,8 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import static java.util.concurrent.TimeUnit.*;
 
@@ -73,94 +75,57 @@ public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNod
   @Test
   @Repeat(times = 10)
   public void testKeyStream() {
-    Map<JsonObject, Buffer> map = genJsonToBuffer(100);
-    loadData(map, (vertx, asyncMap) -> {
-      List<JsonObject> keys = new ArrayList<>();
-      ReadStream<JsonObject> stream = InfinispanAsyncMap.<JsonObject, Buffer>unwrap(asyncMap).keyStream();
-      long pause = 500;
-      long start = System.nanoTime();
-      stream.endHandler(end -> {
-        assertEquals(map.size(), keys.size());
-        assertTrue(keys.containsAll(map.keySet()));
-        long duration = NANOSECONDS.toMillis(System.nanoTime() - start);
-        assertTrue(duration >= 3 * pause);
-        testComplete();
-      }).exceptionHandler(t -> {
-        fail(t);
-      }).handler(jsonObject -> {
-        keys.add(jsonObject);
-        if (jsonObject.getInteger("key") == 3 || jsonObject.getInteger("key") == 16 || jsonObject.getInteger("key") == 38) {
-          stream.pause();
-          int emitted = keys.size();
-          vertx.setTimer(pause, tid -> {
-            assertTrue("Items emitted during pause", emitted == keys.size());
-            stream.resume();
-          });
-        }
-      });
+    testReadStream(InfinispanAsyncMap::keyStream, (map, keys) -> {
+      assertEquals(map.size(), keys.size());
+      assertTrue(keys.containsAll(map.keySet()));
     });
-    await();
   }
 
   @Test
   @Repeat(times = 10)
   public void testValueStream() {
-    Map<JsonObject, Buffer> map = genJsonToBuffer(100);
-    loadData(map, (vertx, asyncMap) -> {
-      List<Buffer> values = new ArrayList<>();
-      ReadStream<Buffer> stream = InfinispanAsyncMap.<JsonObject, Buffer>unwrap(asyncMap).valueStream();
-      AtomicInteger idx = new AtomicInteger();
-      long pause = 500;
-      long start = System.nanoTime();
-      stream.endHandler(end -> {
-        assertEquals(map.size(), values.size());
-        assertTrue(values.containsAll(map.values()));
-        assertTrue(map.values().containsAll(values));
-        long duration = NANOSECONDS.toMillis(System.nanoTime() - start);
-        assertTrue(duration >= 3 * pause);
-        testComplete();
-      }).exceptionHandler(t -> {
-        fail(t);
-      }).handler(buffer -> {
-        values.add(buffer);
-        int j = idx.getAndIncrement();
-        if (j == 3 || j == 16 || j == 38) {
-          stream.pause();
-          int emitted = values.size();
-          vertx.setTimer(pause, tid -> {
-            assertTrue("Items emitted during pause", emitted == values.size());
-            stream.resume();
-          });
-        }
-      });
+    testReadStream(InfinispanAsyncMap::valueStream, (map, values) -> {
+      assertEquals(map.size(), values.size());
+      assertTrue(values.containsAll(map.values()));
+      assertTrue(map.values().containsAll(values));
     });
-    await();
   }
 
   @Test
   @Repeat(times = 10)
   public void testEntryStream() {
+    testReadStream(InfinispanAsyncMap::entryStream, (map, entries) -> {
+      assertEquals(map.size(), entries.size());
+      assertTrue(entries.containsAll(map.entrySet()));
+    });
+  }
+
+  private <T> void testReadStream(
+    Function<InfinispanAsyncMap<JsonObject, Buffer>, ReadStream<T>> streamFactory,
+    BiConsumer<Map<JsonObject, Buffer>, List<T>> assertions
+  ) {
     Map<JsonObject, Buffer> map = genJsonToBuffer(100);
     loadData(map, (vertx, asyncMap) -> {
-      List<Map.Entry<JsonObject, Buffer>> entries = new ArrayList<>();
-      ReadStream<Map.Entry<JsonObject, Buffer>> stream = InfinispanAsyncMap.<JsonObject, Buffer>unwrap(asyncMap).entryStream();
+      List<T> items = new ArrayList<>();
+      ReadStream<T> stream = streamFactory.apply(InfinispanAsyncMap.unwrap(asyncMap));
+      AtomicInteger idx = new AtomicInteger();
       long pause = 500;
       long start = System.nanoTime();
       stream.endHandler(end -> {
-        assertEquals(map.size(), entries.size());
-        assertTrue(entries.containsAll(map.entrySet()));
+        assertions.accept(map, items);
         long duration = NANOSECONDS.toMillis(System.nanoTime() - start);
         assertTrue(duration >= 3 * pause);
         testComplete();
       }).exceptionHandler(t -> {
         fail(t);
-      }).handler(entry -> {
-        entries.add(entry);
-        if (entry.getKey().getInteger("key") == 3 || entry.getKey().getInteger("key") == 16 || entry.getKey().getInteger("key") == 38) {
+      }).handler(item -> {
+        items.add(item);
+        int j = idx.getAndIncrement();
+        if (j == 3 || j == 16 || j == 38) {
           stream.pause();
-          int emitted = entries.size();
+          int emitted = items.size();
           vertx.setTimer(pause, tid -> {
-            assertTrue("Items emitted during pause", emitted == entries.size());
+            assertTrue("Items emitted during pause", emitted == items.size());
             stream.resume();
           });
         }
