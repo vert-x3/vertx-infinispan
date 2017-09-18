@@ -18,9 +18,14 @@ package examples;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.streams.ReadStream;
+import io.vertx.ext.cluster.infinispan.InfinispanAsyncMap;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.infinispan.manager.DefaultCacheManager;
+
+import java.util.Map;
 
 /**
  * @author Thomas Segismont
@@ -53,5 +58,12 @@ public class Examples {
         // failed!
       }
     });
+  }
+
+  public <K, V> void asyncMapStreams(AsyncMap<K, V> asyncMap) {
+    InfinispanAsyncMap<K, V> infinispanAsyncMap = InfinispanAsyncMap.unwrap(asyncMap);
+    ReadStream<K> keyStream = infinispanAsyncMap.keyStream();
+    ReadStream<V> valueStream = infinispanAsyncMap.valueStream();
+    ReadStream<Map.Entry<K, V>> entryReadStream = infinispanAsyncMap.entryStream();
   }
 }

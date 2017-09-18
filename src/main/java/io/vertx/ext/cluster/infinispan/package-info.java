@@ -328,6 +328,19 @@
  * Please refer to the http://www.jgroups.org/manual/index.html#Logging[JGroups logging documentation] if you need
  * more details or want to implement your own logging backend implementation.
  *
+ * == SharedData extensions
+ *
+ * === AsyncMap content streams
+ *
+ * The `InfinispanAsyncMap` API allows to retrieve keys, values and entries as streams.
+ * This can be useful if you need to go through the content of a large map for bulk processing.
+ *
+ * [source,$lang]
+ * ----
+ * {@link examples.Examples#asyncMapStreams(io.vertx.core.shareddata.AsyncMap)}
+ * ----
+
+ *
  */
 @Document(fileName = "index.adoc")
 @ModuleGen(name = "vertx-infinispan", groupPackage = "io.vertx")
