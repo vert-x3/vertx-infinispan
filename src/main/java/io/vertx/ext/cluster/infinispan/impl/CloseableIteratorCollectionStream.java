@@ -26,6 +26,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -195,9 +196,14 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
 
   private void close() {
     closed = true;
+    AtomicReference<CloseableIterator<I>> iteratorRef = new AtomicReference<>();
     context.executeBlocking(fut -> {
-      if (iterator != null) {
-        iterator.close();
+      synchronized (this) {
+        iteratorRef.set(iterator);
+      }
+      CloseableIterator<I> iter = iteratorRef.get();
+      if (iter != null) {
+        iter.close();
       }
       fut.complete();
     }, false, null);
