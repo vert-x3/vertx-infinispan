@@ -32,32 +32,32 @@ import java.util.function.Supplier;
 /**
  * @author Thomas Segismont
  */
-public class CloseableIteratorCollectionStream<IN, OUT> implements ReadStream<OUT> {
+public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
 
   private static final int BATCH_SIZE = 10;
 
   private final Context context;
-  private final Supplier<CloseableIteratorCollection<IN>> iterableSupplier;
-  private final Function<IN, OUT> converter;
+  private final Supplier<CloseableIteratorCollection<I>> iterableSupplier;
+  private final Function<I, O> converter;
 
-  private CloseableIteratorCollection<IN> iterable;
-  private CloseableIterator<IN> iterator;
-  private Deque<IN> queue;
-  private Handler<OUT> dataHandler;
+  private CloseableIteratorCollection<I> iterable;
+  private CloseableIterator<I> iterator;
+  private Deque<I> queue;
+  private Handler<O> dataHandler;
   private Handler<Throwable> exceptionHandler;
   private Handler<Void> endHandler;
   private boolean paused;
   private boolean readInProgress;
   private boolean closed;
 
-  public CloseableIteratorCollectionStream(Context context, Supplier<CloseableIteratorCollection<IN>> iterableSupplier, Function<IN, OUT> converter) {
+  public CloseableIteratorCollectionStream(Context context, Supplier<CloseableIteratorCollection<I>> iterableSupplier, Function<I, O> converter) {
     this.context = context;
     this.iterableSupplier = iterableSupplier;
     this.converter = converter;
   }
 
   @Override
-  public synchronized CloseableIteratorCollectionStream<IN, OUT> exceptionHandler(Handler<Throwable> handler) {
+  public synchronized CloseableIteratorCollectionStream<I, O> exceptionHandler(Handler<Throwable> handler) {
     checkClosed();
     this.exceptionHandler = handler;
     return this;
@@ -70,13 +70,13 @@ public class CloseableIteratorCollectionStream<IN, OUT> implements ReadStream<OU
   }
 
   @Override
-  public synchronized CloseableIteratorCollectionStream<IN, OUT> handler(Handler<OUT> handler) {
+  public synchronized CloseableIteratorCollectionStream<I, O> handler(Handler<O> handler) {
     checkClosed();
     if (handler == null) {
       close();
     } else {
       dataHandler = handler;
-      context.<CloseableIteratorCollection<IN>>executeBlocking(fut -> fut.complete(iterableSupplier.get()), false, ar -> {
+      context.<CloseableIteratorCollection<I>>executeBlocking(fut -> fut.complete(iterableSupplier.get()), false, ar -> {
         synchronized (this) {
           if (ar.succeeded()) {
             iterable = ar.result();
@@ -98,14 +98,14 @@ public class CloseableIteratorCollectionStream<IN, OUT> implements ReadStream<OU
   }
 
   @Override
-  public synchronized CloseableIteratorCollectionStream<IN, OUT> pause() {
+  public synchronized CloseableIteratorCollectionStream<I, O> pause() {
     checkClosed();
     paused = true;
     return this;
   }
 
   @Override
-  public synchronized CloseableIteratorCollectionStream<IN, OUT> resume() {
+  public synchronized CloseableIteratorCollectionStream<I, O> resume() {
     checkClosed();
     if (paused) {
       paused = false;
@@ -122,7 +122,7 @@ public class CloseableIteratorCollectionStream<IN, OUT> implements ReadStream<OU
     }
     readInProgress = true;
     if (iterator == null) {
-      context.<CloseableIterator<IN>>executeBlocking(fut -> fut.complete(iterable.iterator()), false, ar -> {
+      context.<CloseableIterator<I>>executeBlocking(fut -> fut.complete(iterable.iterator()), false, ar -> {
         synchronized (this) {
           readInProgress = false;
           if (ar.succeeded()) {
@@ -145,8 +145,8 @@ public class CloseableIteratorCollectionStream<IN, OUT> implements ReadStream<OU
       context.runOnContext(v -> emitQueued());
       return;
     }
-    context.<List<IN>>executeBlocking(fut -> {
-      List<IN> batch = new ArrayList<>(BATCH_SIZE);
+    context.<List<I>>executeBlocking(fut -> {
+      List<I> batch = new ArrayList<>(BATCH_SIZE);
       for (int i = 0; i < BATCH_SIZE && iterator.hasNext(); i++) {
         batch.add(iterator.next());
       }
@@ -188,7 +188,7 @@ public class CloseableIteratorCollectionStream<IN, OUT> implements ReadStream<OU
   }
 
   @Override
-  public synchronized CloseableIteratorCollectionStream<IN, OUT> endHandler(Handler<Void> handler) {
+  public synchronized CloseableIteratorCollectionStream<I, O> endHandler(Handler<Void> handler) {
     endHandler = handler;
     return this;
   }
