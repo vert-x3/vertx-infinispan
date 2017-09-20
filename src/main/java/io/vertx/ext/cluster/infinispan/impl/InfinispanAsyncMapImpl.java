@@ -16,29 +16,39 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
-import org.infinispan.AdvancedCache;
-import org.infinispan.Cache;
-import org.infinispan.context.Flag;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.AsyncMap;
+import io.vertx.core.streams.ReadStream;
+import io.vertx.ext.cluster.infinispan.InfinispanAsyncMap;
+import org.infinispan.AdvancedCache;
+import org.infinispan.Cache;
+import org.infinispan.context.Flag;
+import org.infinispan.stream.CacheCollectors;
+
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.*;
 
 /**
  * @author Thomas Segismont
  */
-public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
+public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanAsyncMap<K, V> {
 
   private final Vertx vertx;
   private final AdvancedCache<Object, Object> cache;
 
-  public InfinispanAsyncMap(Vertx vertx, Cache<Object, Object> cache) {
+  public InfinispanAsyncMapImpl(Vertx vertx, Cache<Object, Object> cache) {
     this.vertx = vertx;
     this.cache = cache.getAdvancedCache();
   }
@@ -145,5 +155,49 @@ public class InfinispanAsyncMap<K, V> implements AsyncMap<K, V> {
   @Override
   public void size(Handler<AsyncResult<Integer>> resultHandler) {
     vertx.executeBlocking(future -> future.complete(cache.size()), false, resultHandler);
+  }
+
+  @Override
+  public void keys(Handler<AsyncResult<Set<K>>> resultHandler) {
+    vertx.executeBlocking(future -> {
+      Set<Object> cacheKeys = cache.keySet().stream().collect(CacheCollectors.serializableCollector(() -> toSet()));
+      future.complete(cacheKeys.stream().<K>map(DataConverter::fromCachedObject).collect(Collectors.toSet()));
+    }, false, resultHandler);
+  }
+
+  @Override
+  public void values(Handler<AsyncResult<List<V>>> resultHandler) {
+    vertx.executeBlocking(future -> {
+      List<Object> cacheValues = cache.values().stream().collect(CacheCollectors.serializableCollector(() -> toList()));
+      future.complete(cacheValues.stream().<V>map(DataConverter::fromCachedObject).collect(Collectors.toList()));
+    }, false, resultHandler);
+  }
+
+  @Override
+  public void entries(Handler<AsyncResult<Map<K, V>>> resultHandler) {
+    vertx.executeBlocking(future -> {
+      Map<Object, Object> cacheEntries = cache.entrySet().stream()
+        .collect(CacheCollectors.serializableCollector(() -> toMap(Entry::getKey, Entry::getValue)));
+      future.complete(cacheEntries.entrySet().stream().collect(toMap(DataConverter::fromCachedObject, DataConverter::fromCachedObject)));
+    }, false, resultHandler);
+  }
+
+  @Override
+  public ReadStream<K> keyStream() {
+    return new CloseableIteratorCollectionStream<>(vertx.getOrCreateContext(), cache::keySet, DataConverter::fromCachedObject);
+  }
+
+  @Override
+  public ReadStream<V> valueStream() {
+    return new CloseableIteratorCollectionStream<>(vertx.getOrCreateContext(), cache::values, DataConverter::fromCachedObject);
+  }
+
+  @Override
+  public ReadStream<Entry<K, V>> entryStream() {
+    return new CloseableIteratorCollectionStream<>(vertx.getOrCreateContext(), cache::entrySet, cacheEntry -> {
+      K key = DataConverter.fromCachedObject(cacheEntry.getKey());
+      V value = DataConverter.fromCachedObject(cacheEntry.getValue());
+      return new SimpleImmutableEntry<>(key, value);
+    });
   }
 }
