@@ -30,6 +30,7 @@ import org.infinispan.context.Flag;
 import org.infinispan.stream.CacheCollectors;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -178,7 +179,13 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
     vertx.executeBlocking(future -> {
       Map<Object, Object> cacheEntries = cache.entrySet().stream()
         .collect(CacheCollectors.serializableCollector(() -> toMap(Entry::getKey, Entry::getValue)));
-      future.complete(cacheEntries.entrySet().stream().collect(toMap(DataConverter::fromCachedObject, DataConverter::fromCachedObject)));
+      Map<K, V> result = new HashMap<>();
+      for (Entry<Object, Object> entry : cacheEntries.entrySet()) {
+        K k = DataConverter.fromCachedObject(entry.getKey());
+        V v = DataConverter.fromCachedObject(entry.getValue());
+        result.put(k, v);
+      }
+      future.complete(result);
     }, false, resultHandler);
   }
 
