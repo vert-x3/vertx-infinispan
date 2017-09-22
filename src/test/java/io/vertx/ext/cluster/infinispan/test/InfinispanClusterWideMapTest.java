@@ -28,7 +28,6 @@ import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.cluster.infinispan.InfinispanAsyncMap;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.test.core.ClusterWideMapTestDifferentNodes;
-import io.vertx.test.core.Repeat;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -73,7 +72,6 @@ public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNod
   }
 
   @Test
-  @Repeat(times = 10)
   public void testKeyStream() {
     testReadStream(InfinispanAsyncMap::keyStream, (map, keys) -> {
       assertEquals(map.size(), keys.size());
@@ -82,7 +80,6 @@ public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNod
   }
 
   @Test
-  @Repeat(times = 10)
   public void testValueStream() {
     testReadStream(InfinispanAsyncMap::valueStream, (map, values) -> {
       assertEquals(map.size(), values.size());
@@ -92,7 +89,6 @@ public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNod
   }
 
   @Test
-  @Repeat(times = 10)
   public void testEntryStream() {
     testReadStream(InfinispanAsyncMap::entryStream, (map, entries) -> {
       assertEquals(map.size(), entries.size());
@@ -135,7 +131,6 @@ public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNod
   }
 
   @Test
-  @Repeat(times = 10)
   public void testClosedKeyStream() {
     Map<JsonObject, Buffer> map = genJsonToBuffer(100);
     loadData(map, (vertx, asyncMap) -> {
