@@ -30,7 +30,7 @@
   <properties>
     <stack.version>3.5.0-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
-    <infinispan.version>9.0.0.Final</infinispan.version>
+    <infinispan.version>9.1.1.Final</infinispan.version>
   </properties>
 
   <dependencyManagement>
@@ -55,6 +55,16 @@
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
       <version>${infinispan.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-cloud</artifactId>
+      <version>${infinispan.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jgroups.kubernetes</groupId>
+      <artifactId>jgroups-kubernetes</artifactId>
+      <version>1.0.3.Final</version>
     </dependency>
 
     <dependency>

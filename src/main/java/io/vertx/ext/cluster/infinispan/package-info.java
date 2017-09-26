@@ -138,11 +138,11 @@
  * </cache-container>
  * ----
  *
- * == Configuring for Openshift 3
+ * == Configuring for Kubernetes or Openshift 3
  *
- * On Openshift 3, JGroups should be configured to use the `KUBE_PING` protocol.
+ * On Kubernetes or Openshift 3, JGroups should be configured to use the `KUBE_PING` protocol.
  *
- * First, add the `org.infinispan:infinispan-cloud:${infinispan.version}` dependency to your project.
+ * First, add the `org.infinispan:infinispan-cloud:${infinispan.version}` and `org.jgroups.kubernetes:jgroups-kubernetes:1.0.3.Final` dependencies to your project.
  * With Maven it looks like:
  *
  * [source,xml]
@@ -151,20 +151,14 @@
  *   <groupId>org.infinispan</groupId>
  *   <artifactId>infinispan-cloud</artifactId>
  *   <version>${infinispan.version}</version>
- *   <exclusions>
- *     <exclusion>
- *       <groupId>org.jgroups</groupId>                <1>
- *       <artifactId>jgroups</artifactId>
- *     </exclusion>
- *     <exclusion>
- *       <artifactId>undertow-core</artifactId>        <2>
- *       <groupId>io.undertow</groupId>
- *     </exclusion>
- *   </exclusions>
  * </dependency>
+ * <dependency>
+ *   <groupId>org.jgroups.kubernetes</groupId>
+ *   <artifactId>jgroups-kubernetes</artifactId>
+ *   <version>1.0.3.Final</version>
+ * </dependency>
+ * <dependency>
  * ----
- * <1> make sure to use the `infinispan-core` JGroups version
- * <2> avoid extra dependencies, `KUBE_PING` works fine with the JDK's Http server
  *
  * Then, set the `vertx.jgroups.config` system property to `default-configs/default-jgroups-kubernetes.xml`.
  *
@@ -175,18 +169,18 @@
  *
  * This JGroups stack file is located in the `infinispan-cloud` JAR and preconfigured for Kubernetes/Openshift3.
  *
- * `KUBE_PING` listens to requests on port `8888` by default, so make sure to declare it when building the container image.
- *
- * [source,Dockerfile]
- * ----
- * EXPOSE 8888
- * ----
- *
  * Also, set the project namespace as the scope for discovery.
  *
  * [source,Dockerfile]
  * ----
- * ENV OPENSHIFT_KUBE_PING_NAMESPACE my-openshift3-project
+ * ENV KUBERNETES_NAMESPACE my-project
+ * ----
+ *
+ * Optionnaly, to create separate clusters in the same namespace, add a labels selector:
+ *
+ * [source,Dockerfile]
+ * ----
+ * ENV KUBERNETES_LABELS my-label=my-value
  * ----
  *
  * Then, force usage of IPv4 in the JVM with a system property.
@@ -203,8 +197,7 @@
  * oc policy add-role-to-user view system:serviceaccount:$(oc project -q):default -n $(oc project -q)
  * ----
  *
- * Further configuration details are available in the
- * https://github.com/jgroups-extras/jgroups-kubernetes[Kubernetes discovery protocol for JGroups] README.
+ * Further configuration details are available on the https://github.com/jgroups-extras/jgroups-kubernetes[Kubernetes discovery protocol for JGroups repository].
  *
  * == Configuring for Docker Compose
  *
