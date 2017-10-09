@@ -31,7 +31,6 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMapImpl;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap;
-import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap.MultiMapKey;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsCounter;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsLock;
 import org.infinispan.Cache;
@@ -40,6 +39,9 @@ import org.infinispan.commons.util.FileLookupFactory;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
 import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.multimap.api.EmbeddedMultimapCacheManagerFactory;
+import org.infinispan.multimap.api.MultimapCache;
+import org.infinispan.multimap.api.MultimapCacheManager;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachemanagerlistener.annotation.Merged;
 import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
@@ -127,8 +129,9 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
-      Cache<MultiMapKey, Object> cache = cacheManager.getCache(name);
-      InfinispanAsyncMultiMap<K, V> asyncMultiMap = new InfinispanAsyncMultiMap<>(vertx, cache);
+      MultimapCacheManager<Object, Object> multimapCacheManager = EmbeddedMultimapCacheManagerFactory.from(cacheManager);
+      MultimapCache<Object, Object> multimapCache = multimapCacheManager.get(name);
+      InfinispanAsyncMultiMap<K, V> asyncMultiMap = new InfinispanAsyncMultiMap<>(vertx, multimapCache);
       synchronized (this) {
         multimaps.add(asyncMultiMap);
       }
