@@ -26,15 +26,14 @@ import io.vertx.core.impl.TaskQueue;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
-import org.infinispan.Cache;
 import org.infinispan.commons.marshall.Externalizer;
 import org.infinispan.commons.marshall.SerializeWith;
+import org.infinispan.multimap.api.MultimapCache;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
 import org.infinispan.notifications.cachelistener.annotation.CacheEntryRemoved;
 import org.infinispan.notifications.cachelistener.event.CacheEntryCreatedEvent;
 import org.infinispan.notifications.cachelistener.event.CacheEntryRemovedEvent;
-import org.infinispan.stream.CacheCollectors;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -42,14 +41,14 @@ import java.io.ObjectOutput;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
 import static org.infinispan.notifications.Listener.Observation.*;
@@ -60,16 +59,26 @@ import static org.infinispan.notifications.Listener.Observation.*;
 public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
   private final VertxInternal vertx;
-  private final Cache<MultiMapKey, Object> cache;
+  private final MultimapCache<Object, Object> multimapCache;
   private final ConcurrentMap<K, ChoosableSet<V>> nearCache;
   private final TaskQueue taskQueue;
 
-  public InfinispanAsyncMultiMap(Vertx vertx, Cache<MultiMapKey, Object> cache) {
+  public InfinispanAsyncMultiMap(Vertx vertx, MultimapCache<Object, Object> multimapCache) {
     this.vertx = (VertxInternal) vertx;
-    this.cache = cache;
+    this.multimapCache = multimapCache;
     nearCache = new ConcurrentHashMap<>();
-    cache.addListener(new EntryListener());
+    //multimapCache.addListener(new EntryListener());
     taskQueue = new TaskQueue();
+  }
+
+  private <T> void cfGet(CompletableFuture<T> cf, Future<T> future) {
+    try {
+      future.complete(cf.get());
+    } catch (InterruptedException e) {
+      future.fail(e);
+    } catch (ExecutionException e) {
+      future.fail(e.getCause());
+    }
   }
 
   @Override
@@ -77,8 +86,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
     vertx.getOrCreateContext().executeBlocking(fut -> {
-      cache.put(new MultiMapKey(kk, vv), MeaningLessValue.INSTANCE);
-      fut.complete();
+      cfGet(multimapCache.put(kk, vv), fut);
     }, taskQueue, completionHandler);
   }
 
@@ -88,7 +96,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     @SuppressWarnings("unchecked")
     Queue<GetRequest<K, V>> getRequests = (Queue<GetRequest<K, V>>) context.contextData().computeIfAbsent(this, ctx -> new ArrayDeque<>());
     synchronized (getRequests) {
-      ChoosableSet<V> entries = nearCache.get(k);
+      ChoosableSet<V> entries = null/*nearCache.get(k)*/;
       if (entries != null && entries.isInitialised() && getRequests.isEmpty()) {
         context.runOnContext(v -> {
           resultHandler.handle(Future.succeededFuture(entries));
@@ -106,7 +114,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     GetRequest<K, V> getRequest;
     for (; ; ) {
       getRequest = getRequests.peek();
-      ChoosableSet<V> entries = nearCache.get(getRequest.key);
+      ChoosableSet<V> entries = null/*nearCache.get(getRequest.key)*/;
       if (entries != null && entries.isInitialised()) {
         Handler<AsyncResult<ChoosableIterable<V>>> handler = getRequest.handler;
         context.runOnContext(v -> {
@@ -123,11 +131,15 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     K key = getRequest.key;
     Handler<AsyncResult<ChoosableIterable<V>>> handler = getRequest.handler;
     context.<ChoosableIterable<V>>executeBlocking(fut -> {
-      List<MultiMapKey> collect = cache.keySet().parallelStream()
-        .filter(new KeyEqualsPredicate(DataConverter.toCachedObject(key)))
-        .collect(CacheCollectors.serializableCollector(Collectors::toList));
+      Collection<Object> collect;
+      try {
+        collect = multimapCache.get(DataConverter.toCachedObject(key)).get();
+      } catch (InterruptedException | ExecutionException e) {
+        fut.fail(e);
+        return;
+      }
       Collection<V> entries = collect.stream()
-        .map(mmk -> DataConverter.<V>fromCachedObject(mmk.getValue()))
+        .map(DataConverter::<V>fromCachedObject)
         .collect(toList());
       ChoosableSet<V> sids;
       if (entries != null) {
@@ -164,7 +176,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
     vertx.getOrCreateContext().executeBlocking(fut -> {
-      fut.complete(cache.remove(new MultiMapKey(kk, vv), MeaningLessValue.INSTANCE));
+      cfGet(multimapCache.remove(kk, vv), fut);
     }, taskQueue, completionHandler);
   }
 
@@ -175,9 +187,8 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
   @Override
   public void removeAllMatching(Predicate<V> p, Handler<AsyncResult<Void>> completionHandler) {
-    vertx.getOrCreateContext().executeBlocking(future -> {
-      cache.keySet().removeIf(multiMapKey -> p.test(DataConverter.fromCachedObject(multiMapKey.getValue())));
-      future.complete();
+    vertx.getOrCreateContext().executeBlocking(fut -> {
+      cfGet(multimapCache.remove(o -> p.test(DataConverter.fromCachedObject(o))), fut);
     }, taskQueue, completionHandler);
 
   }
@@ -265,53 +276,6 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
       @SuppressWarnings("unchecked")
       public MultiMapKey readObject(ObjectInput input) throws IOException, ClassNotFoundException {
         return new MultiMapKey(input.readObject(), input.readObject());
-      }
-    }
-  }
-
-  @SerializeWith(MeaningLessValue.MeaningLessValueExternalizer.class)
-  public static class MeaningLessValue {
-    public static final MeaningLessValue INSTANCE = new MeaningLessValue();
-
-    private MeaningLessValue() {
-    }
-
-    public static class MeaningLessValueExternalizer implements Externalizer<MeaningLessValue> {
-      @Override
-      public void writeObject(ObjectOutput output, MeaningLessValue object) throws IOException {
-      }
-
-      @Override
-      public MeaningLessValue readObject(ObjectInput input) throws IOException, ClassNotFoundException {
-        return MeaningLessValue.INSTANCE;
-      }
-    }
-  }
-
-  @SerializeWith(KeyEqualsPredicate.KeyEqualsPredicateExternalizer.class)
-  public static class KeyEqualsPredicate implements Predicate<MultiMapKey> {
-
-    private final Object kk;
-
-    public KeyEqualsPredicate(Object kk) {
-      this.kk = kk;
-    }
-
-    @Override
-    public boolean test(MultiMapKey mmk) {
-      return mmk.getKey().equals(kk);
-    }
-
-    public static class KeyEqualsPredicateExternalizer implements Externalizer<KeyEqualsPredicate> {
-
-      @Override
-      public void writeObject(ObjectOutput output, KeyEqualsPredicate object) throws IOException {
-        output.writeObject(object.kk);
-      }
-
-      @Override
-      public KeyEqualsPredicate readObject(ObjectInput input) throws IOException, ClassNotFoundException {
-        return new KeyEqualsPredicate(input.readObject());
       }
     }
   }

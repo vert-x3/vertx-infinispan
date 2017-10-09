@@ -30,7 +30,7 @@
   <properties>
     <stack.version>3.5.1-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
-    <infinispan.version>9.1.3.Final</infinispan.version>
+    <infinispan.version>9.2.0.Beta2</infinispan.version>
   </properties>
 
   <dependencyManagement>
@@ -54,6 +54,11 @@
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
+      <version>${infinispan.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-multimap</artifactId>
       <version>${infinispan.version}</version>
     </dependency>
 
