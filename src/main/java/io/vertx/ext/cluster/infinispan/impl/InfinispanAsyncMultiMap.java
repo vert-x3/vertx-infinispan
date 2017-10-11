@@ -26,6 +26,7 @@ import io.vertx.core.impl.TaskQueue;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
+import org.infinispan.metadata.Metadata;
 import org.infinispan.multimap.api.MultimapCache;
 import org.infinispan.multimap.impl.EmbeddedMultimapCache;
 import org.infinispan.notifications.Listener;
@@ -35,7 +36,12 @@ import org.infinispan.notifications.cachelistener.annotation.CacheEntryRemoved;
 import org.infinispan.notifications.cachelistener.event.CacheEntryCreatedEvent;
 import org.infinispan.notifications.cachelistener.event.CacheEntryModifiedEvent;
 import org.infinispan.notifications.cachelistener.event.CacheEntryRemovedEvent;
+import org.infinispan.notifications.cachelistener.event.Event;
+import org.infinispan.notifications.cachelistener.filter.CacheEventConverter;
+import org.infinispan.notifications.cachelistener.filter.CacheEventFilter;
+import org.infinispan.notifications.cachelistener.filter.EventType;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashSet;
@@ -47,7 +53,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.*;
 import static org.infinispan.notifications.Listener.Observation.*;
@@ -66,7 +74,13 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     this.vertx = (VertxInternal) vertx;
     this.multimapCache = multimapCache;
     nearCache = new ConcurrentHashMap<>();
-    multimapCache.getCache().addListener(new EntryListener());
+    Set<Class<? extends Annotation>> collect = Stream.<Class<? extends Annotation>>builder()
+      .add(CacheEntryCreated.class)
+      .add(CacheEntryModified.class)
+      .add(CacheEntryRemoved.class)
+      .build()
+      .collect(toSet());
+    multimapCache.getCache().addFilteredListener(new EntryListener(), new EventFilter(), new EventConverter(), collect);
     taskQueue = new TaskQueue();
   }
 
@@ -213,14 +227,21 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     @CacheEntryModified
     public void entryModified(CacheEntryModifiedEvent<Object, Object> event) {
       K k = DataConverter.fromCachedObject(event.getKey());
-      Collection values = (Collection) event.getValue();
+      ModifiedCollection modifiedCollection = (ModifiedCollection) event.getValue();
       ChoosableSet<V> entries = nearCache.get(k);
       if (entries != null) {
-        Set<V> ids = new HashSet<>(values.size());
-        for (Object value : values) {
+        forEachModified(modifiedCollection.toAdd, entries::add);
+        forEachModified(modifiedCollection.toDelete, entries::remove);
+      }
+    }
+
+    private void forEachModified(Collection<Object> collection, Consumer<V> action) {
+      if (collection != null) {
+        Set<V> ids = new HashSet<>(collection.size());
+        for (Object value : collection) {
           ids.add(DataConverter.fromCachedObject(value));
         }
-        entries.replace(ids);
+        ids.forEach(v -> action.accept(v));
       }
     }
 
@@ -264,11 +285,6 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
       ids.addAll(toMerge.ids);
     }
 
-    public void replace(Set<T> ids) {
-      this.ids.clear();
-      this.ids.addAll(ids);
-    }
-
     public boolean isEmpty() {
       return ids.isEmpty();
     }
@@ -301,6 +317,37 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     GetRequest(K key, Handler<AsyncResult<ChoosableIterable<V>>> handler) {
       this.key = key;
       this.handler = handler;
+    }
+  }
+
+  private static class EventFilter implements CacheEventFilter<Object, Collection<Object>> {
+    @Override
+    public boolean accept(Object key, Collection<Object> oldValue, Metadata oldMetadata, Collection<Object> newValue, Metadata newMetadata, EventType eventType) {
+      return true;
+    }
+  }
+
+  private static class EventConverter implements CacheEventConverter<Object, Collection<Object>, Object> {
+    @Override
+    public Object convert(Object key, Collection<Object> oldValue, Metadata oldMetadata, Collection<Object> newValue, Metadata newMetadata, EventType eventType) {
+      if (eventType.getType() == Event.Type.CACHE_ENTRY_MODIFIED) {
+        if (oldValue != null && newValue != null) {
+          oldValue.removeAll(newValue);
+          newValue.removeAll(oldValue);
+        }
+        return new ModifiedCollection(oldValue, newValue);
+      }
+      return newValue;
+    }
+  }
+
+  private static class ModifiedCollection {
+    final Collection<Object> toDelete;
+    final Collection<Object> toAdd;
+
+    private ModifiedCollection(Collection<Object> toDelete, Collection<Object> toAdd) {
+      this.toDelete = toDelete;
+      this.toAdd = toAdd;
     }
   }
 }
