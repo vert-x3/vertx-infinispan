@@ -16,8 +16,8 @@
   -->
 
 <infinispan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="urn:infinispan:config:9.0 http://www.infinispan.org/schemas/infinispan-config-9.0.xsd"
-            xmlns="urn:infinispan:config:9.0">
+            xsi:schemaLocation="urn:infinispan:config:9.2 http://www.infinispan.org/schemas/infinispan-config-9.2.xsd"
+            xmlns="urn:infinispan:config:9.2">
 
   <jgroups>
     <stack-file name="jgroups" path="default-configs/default-jgroups-tcp.xml"/>
@@ -26,10 +26,6 @@
   <cache-container default-cache="__vertx.distributed.cache">
 
     <transport stack="jgroups"/>
-
-    <replicated-cache name="__vertx.subs">
-      <expiration interval="-1"/>
-    </replicated-cache>
 
     <replicated-cache name="__vertx.haInfo">
       <expiration interval="-1"/>

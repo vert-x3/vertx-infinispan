@@ -123,10 +123,6 @@
  * ----
  * <cache-container default-cache="__vertx.distributed.cache">
  *
- *   <replicated-cache name="__vertx.subs">
- *     <expiration interval="-1"/>
- *   </replicated-cache>
- *
  *   <replicated-cache name="__vertx.haInfo">
  *     <expiration interval="-1"/>
  *   </replicated-cache>
