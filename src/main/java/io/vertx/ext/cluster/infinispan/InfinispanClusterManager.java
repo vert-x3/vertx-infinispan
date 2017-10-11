@@ -44,8 +44,8 @@ import org.infinispan.counter.api.CounterManager;
 import org.infinispan.counter.api.CounterType;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.multimap.api.EmbeddedMultimapCacheManagerFactory;
-import org.infinispan.multimap.api.MultimapCache;
 import org.infinispan.multimap.api.MultimapCacheManager;
+import org.infinispan.multimap.impl.EmbeddedMultimapCache;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachemanagerlistener.annotation.Merged;
 import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
@@ -130,8 +130,9 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
+      @SuppressWarnings("unchecked")
       MultimapCacheManager<Object, Object> multimapCacheManager = EmbeddedMultimapCacheManagerFactory.from(cacheManager);
-      MultimapCache<Object, Object> multimapCache = multimapCacheManager.get(name);
+      EmbeddedMultimapCache<Object, Object> multimapCache = (EmbeddedMultimapCache<Object, Object>) multimapCacheManager.get(name);
       InfinispanAsyncMultiMap<K, V> asyncMultiMap = new InfinispanAsyncMultiMap<>(vertx, multimapCache);
       synchronized (this) {
         multimaps.add(asyncMultiMap);
