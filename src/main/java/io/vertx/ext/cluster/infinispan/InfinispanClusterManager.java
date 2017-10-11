@@ -31,13 +31,17 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMapImpl;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap;
-import io.vertx.ext.cluster.infinispan.impl.JGroupsCounter;
+import io.vertx.ext.cluster.infinispan.impl.InfinispanCounter;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsLock;
 import org.infinispan.Cache;
 import org.infinispan.commons.util.FileLookup;
 import org.infinispan.commons.util.FileLookupFactory;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
+import org.infinispan.counter.EmbeddedCounterManagerFactory;
+import org.infinispan.counter.api.CounterConfiguration;
+import org.infinispan.counter.api.CounterManager;
+import org.infinispan.counter.api.CounterType;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.multimap.api.EmbeddedMultimapCacheManagerFactory;
 import org.infinispan.multimap.api.MultimapCache;
@@ -50,11 +54,9 @@ import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.jgroups.JChannel;
-import org.jgroups.blocks.atomic.CounterService;
 import org.jgroups.blocks.locking.LockService;
 import org.jgroups.fork.ForkChannel;
 import org.jgroups.protocols.CENTRAL_LOCK;
-import org.jgroups.protocols.COUNTER;
 import org.jgroups.stack.Protocol;
 
 import java.io.IOException;
@@ -90,7 +92,6 @@ public class InfinispanClusterManager implements ClusterManager {
   private Vertx vertx;
   private DefaultCacheManager cacheManager;
   private NodeListener nodeListener;
-  private CounterService counterService;
   private LockService lockService;
   private volatile boolean active;
   private ClusterViewListener viewListener;
@@ -174,7 +175,11 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public void getCounter(String name, Handler<AsyncResult<Counter>> resultHandler) {
     vertx.executeBlocking(future -> {
-      future.complete(new JGroupsCounter(vertx, counterService.getOrCreateCounter(name, 0)));
+      CounterManager counterManager = EmbeddedCounterManagerFactory.asCounterManager(cacheManager);
+      if (!counterManager.isDefined(name)) {
+        counterManager.defineCounter(name, CounterConfiguration.builder(CounterType.UNBOUNDED_STRONG).build());
+      }
+      future.complete(new InfinispanCounter(vertx, counterManager.getStrongCounter(name)));
     }, false, resultHandler);
   }
 
@@ -240,14 +245,11 @@ public class InfinispanClusterManager implements ClusterManager {
       CENTRAL_LOCK centralLock = new CENTRAL_LOCK();
       centralLock.setValue("use_thread_id_for_lock_owner", Boolean.FALSE);
       centralLock.setBypassBundling(true);
-      COUNTER counter = new COUNTER();
-      counter.setBypassBundling(true);
-      Protocol[] protocols = new Protocol[]{centralLock, counter};
+      Protocol[] protocols = new Protocol[]{centralLock};
       Class<? extends Protocol> topProtocol = channel.getProtocolStack().getTopProtocol().getClass();
       try {
         forkChannel = new ForkChannel(channel, "vertx-infinispan-stack", "vertx-infinispan-channel", true, ABOVE, topProtocol, protocols);
         forkChannel.connect("ignored");
-        counterService = new CounterService(forkChannel);
         lockService = new LockService(forkChannel);
         future.complete();
       } catch (Exception e) {

@@ -20,27 +20,35 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.Counter;
+import org.infinispan.counter.api.StrongCounter;
 
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @author Thomas Segismont
  */
-public class JGroupsCounter implements Counter {
+public class InfinispanCounter implements Counter {
 
   private final Vertx vertx;
-  private final org.jgroups.blocks.atomic.Counter jgroupsCounter;
+  private final StrongCounter strongCounter;
 
-  public JGroupsCounter(Vertx vertx, org.jgroups.blocks.atomic.Counter jgroupsCounter) {
+  public InfinispanCounter(Vertx vertx, StrongCounter strongCounter) {
     this.vertx = vertx;
-    this.jgroupsCounter = jgroupsCounter;
+    this.strongCounter = strongCounter;
   }
 
   @Override
   public void get(Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     vertx.executeBlocking(future -> {
-      future.complete(jgroupsCounter.get());
+      try {
+        future.complete(strongCounter.getValue().get());
+      } catch (InterruptedException e) {
+        future.fail(e);
+      } catch (ExecutionException e) {
+        future.fail(e.getCause());
+      }
     }, false, resultHandler);
   }
 
@@ -66,7 +74,13 @@ public class JGroupsCounter implements Counter {
   public void addAndGet(long value, Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     vertx.executeBlocking(future -> {
-      future.complete(jgroupsCounter.addAndGet(value));
+      try {
+        future.complete(strongCounter.addAndGet(value).get());
+      } catch (InterruptedException e) {
+        future.fail(e);
+      } catch (ExecutionException e) {
+        future.fail(e.getCause());
+      }
     }, false, resultHandler);
   }
 
@@ -74,7 +88,13 @@ public class JGroupsCounter implements Counter {
   public void getAndAdd(long value, Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     vertx.executeBlocking(future -> {
-      future.complete(jgroupsCounter.addAndGet(value) - value);
+      try {
+        future.complete(strongCounter.addAndGet(value).get() - value);
+      } catch (InterruptedException e) {
+        future.fail(e);
+      } catch (ExecutionException e) {
+        future.fail(e.getCause());
+      }
     }, false, resultHandler);
   }
 
@@ -82,7 +102,13 @@ public class JGroupsCounter implements Counter {
   public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     vertx.executeBlocking(future -> {
-      future.complete(jgroupsCounter.compareAndSet(expected, value));
+      try {
+        future.complete(strongCounter.compareAndSet(expected, value).get());
+      } catch (InterruptedException e) {
+        future.fail(e);
+      } catch (ExecutionException e) {
+        future.fail(e.getCause());
+      }
     }, false, resultHandler);
   }
 }
