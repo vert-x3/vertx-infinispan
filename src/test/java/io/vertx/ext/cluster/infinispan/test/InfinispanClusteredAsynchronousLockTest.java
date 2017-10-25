@@ -71,16 +71,14 @@ public class InfinispanClusteredAsynchronousLockTest extends ClusteredAsynchrono
 
   @Override
   @Test
-  @Ignore
   public void testAcquireOnSameEventLoop() {
-    // Not supported yet
+    super.testAcquireOnSameEventLoop();
   }
 
   @Override
   @Test
-  @Ignore
   public void testAcquireOnExecuteBlocking() {
-    // Not supported yet
+    super.testAcquireOnExecuteBlocking();
   }
 
   @Override
