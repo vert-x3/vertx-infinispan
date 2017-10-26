@@ -16,6 +16,45 @@
 
 package io.vertx.ext.cluster.infinispan;
 
+import static java.util.stream.Collectors.toList;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+
+import org.infinispan.Cache;
+import org.infinispan.commons.util.FileLookup;
+import org.infinispan.commons.util.FileLookupFactory;
+import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
+import org.infinispan.configuration.parsing.ParserRegistry;
+import org.infinispan.counter.EmbeddedCounterManagerFactory;
+import org.infinispan.counter.api.CounterConfiguration;
+import org.infinispan.counter.api.CounterManager;
+import org.infinispan.counter.api.CounterType;
+import org.infinispan.lock.api.ClusteredLock;
+import org.infinispan.lock.api.ClusteredLockManager;
+import org.infinispan.lock.api.EmbeddedClusteredLockManagerFactory;
+import org.infinispan.lock.api.impl.manager.EmbeddedClusteredLockManager;
+import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.multimap.api.EmbeddedMultimapCacheManagerFactory;
+import org.infinispan.multimap.api.MultimapCacheManager;
+import org.infinispan.multimap.impl.EmbeddedMultimapCache;
+import org.infinispan.notifications.Listener;
+import org.infinispan.notifications.cachemanagerlistener.annotation.Merged;
+import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
+import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
+import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
+import org.infinispan.remoting.transport.Address;
+import org.jgroups.fork.ForkChannel;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -32,46 +71,7 @@ import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMapImpl;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanCounter;
-import io.vertx.ext.cluster.infinispan.impl.JGroupsLock;
-import org.infinispan.Cache;
-import org.infinispan.commons.util.FileLookup;
-import org.infinispan.commons.util.FileLookupFactory;
-import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
-import org.infinispan.configuration.parsing.ParserRegistry;
-import org.infinispan.counter.EmbeddedCounterManagerFactory;
-import org.infinispan.counter.api.CounterConfiguration;
-import org.infinispan.counter.api.CounterManager;
-import org.infinispan.counter.api.CounterType;
-import org.infinispan.manager.DefaultCacheManager;
-import org.infinispan.multimap.api.EmbeddedMultimapCacheManagerFactory;
-import org.infinispan.multimap.api.MultimapCacheManager;
-import org.infinispan.multimap.impl.EmbeddedMultimapCache;
-import org.infinispan.notifications.Listener;
-import org.infinispan.notifications.cachemanagerlistener.annotation.Merged;
-import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
-import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
-import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
-import org.infinispan.remoting.transport.Address;
-import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
-import org.jgroups.JChannel;
-import org.jgroups.blocks.locking.LockService;
-import org.jgroups.fork.ForkChannel;
-import org.jgroups.protocols.CENTRAL_LOCK;
-import org.jgroups.stack.Protocol;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.WeakHashMap;
-import java.util.concurrent.TimeUnit;
-
-import static java.util.stream.Collectors.*;
-import static org.jgroups.stack.ProtocolStack.Position.*;
+import io.vertx.ext.cluster.infinispan.impl.InfinispanLock;
 
 /**
  * @author Thomas Segismont
@@ -92,12 +92,11 @@ public class InfinispanClusterManager implements ClusterManager {
   private Vertx vertx;
   private DefaultCacheManager cacheManager;
   private NodeListener nodeListener;
-  private LockService lockService;
+  private ClusteredLockManager clusteredLockManager;
   private volatile boolean active;
   private ClusterViewListener viewListener;
   // Guarded by this
   private Set<InfinispanAsyncMultiMap> multimaps = Collections.newSetFromMap(new WeakHashMap<>(1));
-  private ForkChannel forkChannel;
 
   /**
    * Creates a new cluster manager configured with {@code infinispan.xml} and {@code jgroups.xml} files.
@@ -109,8 +108,8 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   /**
-   * Creates a new cluster manager with an existing {@link DefaultCacheManager}.
-   * It is your responsibility to start/stop the cache manager when the Vert.x instance joins/leaves the cluster.
+   * Creates a new cluster manager with an existing {@link DefaultCacheManager}. It is your responsibility to
+   * start/stop the cache manager when the Vert.x instance joins/leaves the cluster.
    *
    * @param cacheManager the existing cache manager
    */
@@ -159,14 +158,20 @@ public class InfinispanClusterManager implements ClusterManager {
     ContextImpl context = (ContextImpl) vertx.getOrCreateContext();
     // Ordered on the internal blocking executor
     context.executeBlocking(() -> {
-      java.util.concurrent.locks.Lock lock = lockService.getLock(name);
+      clusteredLockManager.defineLock(name);
+      ClusteredLock lock = clusteredLockManager.get(name);
       try {
-        if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
-          return new JGroupsLock(vertx, lock);
-        } else {
-          throw new VertxException("Timed out waiting to get lock " + name);
-        }
-      } catch (InterruptedException e) {
+        return lock.tryLock(timeout, TimeUnit.MILLISECONDS)
+          .thenApply(result -> {
+            if (result) {
+              return new InfinispanLock(lock);
+            }
+            throw new VertxException("Timed out waiting to get lock " + name);
+          })
+          .exceptionally(ex -> {
+            throw new VertxException("Technical error waiting to get lock " + name, ex);
+          }).get();
+      } catch (InterruptedException | ExecutionException e) {
         Thread.currentThread().interrupt();
         throw new VertxException(e);
       }
@@ -241,17 +246,8 @@ public class InfinispanClusterManager implements ClusterManager {
       }
       viewListener = new ClusterViewListener();
       cacheManager.addListener(viewListener);
-      JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
-      JChannel channel = transport.getChannel();
-      CENTRAL_LOCK centralLock = new CENTRAL_LOCK();
-      centralLock.setValue("use_thread_id_for_lock_owner", Boolean.FALSE);
-      centralLock.setBypassBundling(true);
-      Protocol[] protocols = new Protocol[]{centralLock};
-      Class<? extends Protocol> topProtocol = channel.getProtocolStack().getTopProtocol().getClass();
       try {
-        forkChannel = new ForkChannel(channel, "vertx-infinispan-stack", "vertx-infinispan-channel", true, ABOVE, topProtocol, protocols);
-        forkChannel.connect("ignored");
-        lockService = new LockService(forkChannel);
+        clusteredLockManager = EmbeddedClusteredLockManagerFactory.from(cacheManager);
         future.complete();
       } catch (Exception e) {
         future.fail(e);
@@ -280,7 +276,6 @@ public class InfinispanClusterManager implements ClusterManager {
         return;
       }
       active = false;
-      forkChannel.close();
       cacheManager.removeListener(viewListener);
       if (!userProvidedCacheManager) {
         cacheManager.stop();
