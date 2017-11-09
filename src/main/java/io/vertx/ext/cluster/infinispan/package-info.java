@@ -142,7 +142,7 @@
  *
  * On Kubernetes or Openshift 3, JGroups should be configured to use the `KUBE_PING` protocol.
  *
- * First, add the `org.infinispan:infinispan-cloud:${infinispan.version}` and `org.jgroups.kubernetes:jgroups-kubernetes:1.0.3.Final` dependencies to your project.
+ * First, add the `org.infinispan:infinispan-cloud:${infinispan.version}` and `org.jgroups.kubernetes:jgroups-kubernetes:1.0.5.Final` dependencies to your project.
  * With Maven it looks like:
  *
  * [source,xml]
