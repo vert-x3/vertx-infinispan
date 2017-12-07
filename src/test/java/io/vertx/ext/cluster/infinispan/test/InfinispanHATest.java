@@ -25,6 +25,8 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.test.core.HATest;
 
+import java.math.BigInteger;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -32,6 +34,13 @@ import java.util.concurrent.TimeUnit;
  * @author Thomas Segismont
  */
 public class InfinispanHATest extends HATest {
+
+  @Override
+  public void setUp() throws Exception {
+    Random random = new Random();
+    System.setProperty("vertx.infinispan.test.auth.token", new BigInteger(128, random).toString(32));
+    super.setUp();
+  }
 
   @Override
   protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {

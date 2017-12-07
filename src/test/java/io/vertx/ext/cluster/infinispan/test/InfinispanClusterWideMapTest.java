@@ -30,9 +30,11 @@ import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.test.core.ClusterWideMapTestDifferentNodes;
 import org.junit.Test;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,6 +47,13 @@ import static java.util.concurrent.TimeUnit.*;
  * @author Thomas Segismont
  */
 public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNodes {
+
+  @Override
+  public void setUp() throws Exception {
+    Random random = new Random();
+    System.setProperty("vertx.infinispan.test.auth.token", new BigInteger(128, random).toString(32));
+    super.setUp();
+  }
 
   @Override
   protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {

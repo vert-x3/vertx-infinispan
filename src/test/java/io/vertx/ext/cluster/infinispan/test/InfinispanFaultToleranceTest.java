@@ -25,8 +25,10 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.test.core.FaultToleranceTest;
 
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -34,6 +36,13 @@ import java.util.concurrent.TimeUnit;
  * @author Thomas Segismont
  */
 public class InfinispanFaultToleranceTest extends FaultToleranceTest {
+
+  @Override
+  public void setUp() throws Exception {
+    Random random = new Random();
+    System.setProperty("vertx.infinispan.test.auth.token", new BigInteger(128, random).toString(32));
+    super.setUp();
+  }
 
   @Override
   protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
@@ -62,8 +71,14 @@ public class InfinispanFaultToleranceTest extends FaultToleranceTest {
 
   @Override
   protected List<String> getExternalNodeSystemProperties() {
-    return Arrays.asList("-Djava.net.preferIPv4Stack=true", "-Djgroups.join_timeout=1000", "-Dvertx.infinispan.config=infinispan.xml",
+    return Arrays.asList(
+      "-Djava.net.preferIPv4Stack=true",
+      "-Djgroups.join_timeout=1000",
+      "-Dvertx.infinispan.config=infinispan.xml",
+      "-Dvertx.jgroups.config=jgroups.xml",
+      "-Dvertx.infinispan.test.auth.token=" + System.getProperty("vertx.infinispan.test.auth.token"),
       "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
-      "-Djgroups.logging.log_factory_class=io.vertx.ext.cluster.infinispan.test.JGroupsLogFactory");
+      "-Djgroups.logging.log_factory_class=io.vertx.ext.cluster.infinispan.test.JGroupsLogFactory"
+    );
   }
 }
