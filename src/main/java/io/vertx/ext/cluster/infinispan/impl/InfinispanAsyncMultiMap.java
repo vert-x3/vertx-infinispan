@@ -61,6 +61,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
 
   private final VertxInternal vertx;
   private final Cache<MultiMapKey, Object> cache;
+  private final EntryListener listener;
   private final ConcurrentMap<K, ChoosableSet<V>> nearCache;
   private final TaskQueue taskQueue;
 
@@ -68,7 +69,8 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     this.vertx = (VertxInternal) vertx;
     this.cache = cache;
     nearCache = new ConcurrentHashMap<>();
-    cache.addListener(new EntryListener());
+    listener = new EntryListener();
+    cache.addListener(listener);
     taskQueue = new TaskQueue();
   }
 
@@ -180,6 +182,11 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
       future.complete();
     }, taskQueue, completionHandler);
 
+  }
+
+  @Override
+  public void close() {
+    cache.removeListener(listener);
   }
 
   public void clearCache() {
