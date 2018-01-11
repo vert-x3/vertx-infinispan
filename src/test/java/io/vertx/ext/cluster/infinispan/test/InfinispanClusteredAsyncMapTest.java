@@ -27,7 +27,7 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.cluster.infinispan.InfinispanAsyncMap;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
-import io.vertx.test.core.ClusterWideMapTestDifferentNodes;
+import io.vertx.test.core.ClusteredAsyncMapTest;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -46,7 +46,7 @@ import static java.util.concurrent.TimeUnit.*;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanClusterWideMapTest extends ClusterWideMapTestDifferentNodes {
+public class InfinispanClusteredAsyncMapTest extends ClusteredAsyncMapTest {
 
   @Override
   public void setUp() throws Exception {
