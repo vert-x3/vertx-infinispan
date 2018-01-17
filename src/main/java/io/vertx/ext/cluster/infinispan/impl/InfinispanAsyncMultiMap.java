@@ -16,31 +16,13 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.impl.ConcurrentHashSet;
-import io.vertx.core.impl.ContextImpl;
-import io.vertx.core.impl.TaskQueue;
-import io.vertx.core.impl.VertxInternal;
-import io.vertx.core.spi.cluster.AsyncMultiMap;
-import io.vertx.core.spi.cluster.ChoosableIterable;
-import org.infinispan.metadata.Metadata;
-import org.infinispan.multimap.api.embedded.MultimapCache;
-import org.infinispan.multimap.impl.EmbeddedMultimapCache;
-import org.infinispan.notifications.Listener;
-import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
-import org.infinispan.notifications.cachelistener.annotation.CacheEntryModified;
-import org.infinispan.notifications.cachelistener.annotation.CacheEntryRemoved;
-import org.infinispan.notifications.cachelistener.event.CacheEntryCreatedEvent;
-import org.infinispan.notifications.cachelistener.event.CacheEntryModifiedEvent;
-import org.infinispan.notifications.cachelistener.event.CacheEntryRemovedEvent;
-import org.infinispan.notifications.cachelistener.event.Event;
-import org.infinispan.notifications.cachelistener.filter.CacheEventConverter;
-import org.infinispan.notifications.cachelistener.filter.CacheEventFilter;
-import org.infinispan.notifications.cachelistener.filter.EventType;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
+import static org.infinispan.notifications.Listener.Observation.POST;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.lang.annotation.Annotation;
 import java.util.ArrayDeque;
 import java.util.Collection;
@@ -57,8 +39,33 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.*;
-import static org.infinispan.notifications.Listener.Observation.*;
+import org.infinispan.commons.marshall.Externalizer;
+import org.infinispan.commons.marshall.SerializeWith;
+import org.infinispan.metadata.Metadata;
+import org.infinispan.multimap.api.embedded.MultimapCache;
+import org.infinispan.multimap.impl.EmbeddedMultimapCache;
+import org.infinispan.notifications.Listener;
+import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
+import org.infinispan.notifications.cachelistener.annotation.CacheEntryModified;
+import org.infinispan.notifications.cachelistener.annotation.CacheEntryRemoved;
+import org.infinispan.notifications.cachelistener.event.CacheEntryCreatedEvent;
+import org.infinispan.notifications.cachelistener.event.CacheEntryModifiedEvent;
+import org.infinispan.notifications.cachelistener.event.CacheEntryRemovedEvent;
+import org.infinispan.notifications.cachelistener.event.Event;
+import org.infinispan.notifications.cachelistener.filter.CacheEventConverter;
+import org.infinispan.notifications.cachelistener.filter.CacheEventFilter;
+import org.infinispan.notifications.cachelistener.filter.EventType;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.impl.ConcurrentHashSet;
+import io.vertx.core.impl.ContextImpl;
+import io.vertx.core.impl.TaskQueue;
+import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.spi.cluster.AsyncMultiMap;
+import io.vertx.core.spi.cluster.ChoosableIterable;
 
 /**
  * @author Thomas Segismont
@@ -320,6 +327,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     }
   }
 
+  @SerializeWith(EventFilterExternalizer.class)
   private static class EventFilter implements CacheEventFilter<Object, Collection<Object>> {
     @Override
     public boolean accept(Object key, Collection<Object> oldValue, Metadata oldMetadata, Collection<Object> newValue, Metadata newMetadata, EventType eventType) {
@@ -327,6 +335,20 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     }
   }
 
+  public static class EventFilterExternalizer implements Externalizer<EventFilter> {
+
+    @Override
+    public void writeObject(ObjectOutput objectOutput, EventFilter eventFilter) throws IOException {
+
+    }
+
+    @Override
+    public EventFilter readObject(ObjectInput objectInput) throws IOException, ClassNotFoundException {
+      return new EventFilter();
+    }
+  }
+
+  @SerializeWith(EventConverterExternalizer.class)
   private static class EventConverter implements CacheEventConverter<Object, Collection<Object>, Object> {
     @Override
     public Object convert(Object key, Collection<Object> oldValue, Metadata oldMetadata, Collection<Object> newValue, Metadata newMetadata, EventType eventType) {
@@ -338,6 +360,18 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
         return new ModifiedCollection(oldValue, newValue);
       }
       return newValue;
+    }
+  }
+
+  public static class EventConverterExternalizer implements Externalizer<EventConverter> {
+
+    @Override
+    public void writeObject(ObjectOutput objectOutput, EventConverter eventConverter) throws IOException {
+    }
+
+    @Override
+    public EventConverter readObject(ObjectInput objectInput) throws IOException, ClassNotFoundException {
+      return new EventConverter();
     }
   }
 
