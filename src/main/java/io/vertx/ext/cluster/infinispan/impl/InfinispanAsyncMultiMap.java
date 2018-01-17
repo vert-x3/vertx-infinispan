@@ -375,6 +375,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     }
   }
 
+  @SerializeWith(ModifiedCollectionExternalizer.class)
   private static class ModifiedCollection {
     final Collection<Object> toDelete;
     final Collection<Object> toAdd;
@@ -382,6 +383,20 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     private ModifiedCollection(Collection<Object> toDelete, Collection<Object> toAdd) {
       this.toDelete = toDelete;
       this.toAdd = toAdd;
+    }
+  }
+
+  public static class ModifiedCollectionExternalizer implements Externalizer<ModifiedCollection> {
+
+    @Override
+    public void writeObject(ObjectOutput objectOutput, ModifiedCollection modifiedCollection) throws IOException {
+      objectOutput.writeObject(modifiedCollection.toDelete);
+      objectOutput.writeObject(modifiedCollection.toAdd);
+    }
+
+    @Override
+    public ModifiedCollection readObject(ObjectInput objectInput) throws IOException, ClassNotFoundException {
+      return new ModifiedCollection((Collection<Object>) objectInput.readObject(), (Collection<Object>) objectInput.readObject());
     }
   }
 }
