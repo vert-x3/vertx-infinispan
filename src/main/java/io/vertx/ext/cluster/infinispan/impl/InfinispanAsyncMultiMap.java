@@ -27,7 +27,7 @@ import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.spi.cluster.AsyncMultiMap;
 import io.vertx.core.spi.cluster.ChoosableIterable;
 import org.infinispan.metadata.Metadata;
-import org.infinispan.multimap.api.MultimapCache;
+import org.infinispan.multimap.api.embedded.MultimapCache;
 import org.infinispan.multimap.impl.EmbeddedMultimapCache;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
