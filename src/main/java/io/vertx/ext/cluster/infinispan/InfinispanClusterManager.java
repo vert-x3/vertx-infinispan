@@ -35,6 +35,7 @@ import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap.MultiMapKey;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsCounter;
 import io.vertx.ext.cluster.infinispan.impl.JGroupsLock;
 import org.infinispan.Cache;
+import org.infinispan.commons.api.BasicCacheContainer;
 import org.infinispan.commons.util.FileLookup;
 import org.infinispan.commons.util.FileLookupFactory;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
@@ -122,6 +123,10 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public void setVertx(Vertx vertx) {
     this.vertx = vertx;
+  }
+
+  public BasicCacheContainer getCacheContainer() {
+    return cacheManager;
   }
 
   @Override
