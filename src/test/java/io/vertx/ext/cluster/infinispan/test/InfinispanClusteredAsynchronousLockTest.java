@@ -24,7 +24,6 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.test.core.ClusteredAsynchronousLockTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -67,20 +66,6 @@ public class InfinispanClusteredAsynchronousLockTest extends ClusteredAsynchrono
   @Override
   protected ClusterManager getClusterManager() {
     return new InfinispanClusterManager();
-  }
-
-  @Override
-  @Test
-  @Ignore
-  public void testAcquireOnSameEventLoop() {
-    // Not supported yet
-  }
-
-  @Override
-  @Test
-  @Ignore
-  public void testAcquireOnExecuteBlocking() {
-    // Not supported yet
   }
 
   @Override

@@ -20,27 +20,28 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.Counter;
+import org.infinispan.counter.api.SyncStrongCounter;
 
 import java.util.Objects;
 
 /**
  * @author Thomas Segismont
  */
-public class JGroupsCounter implements Counter {
+public class InfinispanCounter implements Counter {
 
   private final Vertx vertx;
-  private final org.jgroups.blocks.atomic.Counter jgroupsCounter;
+  private final SyncStrongCounter strongCounter;
 
-  public JGroupsCounter(Vertx vertx, org.jgroups.blocks.atomic.Counter jgroupsCounter) {
+  public InfinispanCounter(Vertx vertx, SyncStrongCounter strongCounter) {
     this.vertx = vertx;
-    this.jgroupsCounter = jgroupsCounter;
+    this.strongCounter = strongCounter;
   }
 
   @Override
   public void get(Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     vertx.executeBlocking(future -> {
-      future.complete(jgroupsCounter.get());
+      future.complete(strongCounter.getValue());
     }, false, resultHandler);
   }
 
@@ -66,7 +67,7 @@ public class JGroupsCounter implements Counter {
   public void addAndGet(long value, Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     vertx.executeBlocking(future -> {
-      future.complete(jgroupsCounter.addAndGet(value));
+      future.complete(strongCounter.addAndGet(value));
     }, false, resultHandler);
   }
 
@@ -74,7 +75,7 @@ public class JGroupsCounter implements Counter {
   public void getAndAdd(long value, Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     vertx.executeBlocking(future -> {
-      future.complete(jgroupsCounter.addAndGet(value) - value);
+      future.complete(strongCounter.addAndGet(value) - value);
     }, false, resultHandler);
   }
 
@@ -82,7 +83,7 @@ public class JGroupsCounter implements Counter {
   public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     vertx.executeBlocking(future -> {
-      future.complete(jgroupsCounter.compareAndSet(expected, value));
+      future.complete(strongCounter.compareAndSet(expected, value));
     }, false, resultHandler);
   }
 }

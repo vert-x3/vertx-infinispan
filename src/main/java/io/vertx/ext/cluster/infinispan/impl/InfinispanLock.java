@@ -16,28 +16,19 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
-import io.vertx.core.Vertx;
+import io.vertx.core.shareddata.Lock;
+import org.infinispan.lock.api.ClusteredLock;
 
-import java.util.concurrent.locks.Lock;
+public class InfinispanLock implements Lock {
 
-/**
- * @author Thomas Segismont
- */
-public class JGroupsLock implements io.vertx.core.shareddata.Lock {
+  private final ClusteredLock lock;
 
-  private final Vertx vertx;
-  private final Lock lock;
-
-  public JGroupsLock(Vertx vertx, Lock lock) {
-    this.vertx = vertx;
+  public InfinispanLock(ClusteredLock lock) {
     this.lock = lock;
   }
 
   @Override
   public void release() {
-    vertx.executeBlocking(future -> {
-      lock.unlock();
-      future.complete();
-    }, false, ar -> {});
+    lock.unlock();
   }
 }

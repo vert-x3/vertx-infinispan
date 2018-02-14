@@ -30,7 +30,8 @@
   <properties>
     <stack.version>3.6.0-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
-    <infinispan.version>9.1.3.Final</infinispan.version>
+    <infinispan.version>9.2.0.CR2</infinispan.version>
+    <jgroups.kubernetes.version>1.0.5.Final</jgroups.kubernetes.version>
   </properties>
 
   <dependencyManagement>
@@ -54,6 +55,21 @@
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
+      <version>${infinispan.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-multimap</artifactId>
+      <version>${infinispan.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-clustered-lock</artifactId>
+      <version>${infinispan.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-clustered-counter</artifactId>
       <version>${infinispan.version}</version>
     </dependency>
 
@@ -161,6 +177,7 @@
                 <arg>-Amaven.artifactId=${project.artifactId}</arg>
                 <arg>-Amaven.version=${project.version}</arg>
                 <arg>-Ainfinispan.version=${infinispan.version}</arg>
+                <arg>-Ajgroups.kubernetes.version=${jgroups.kubernetes.version}</arg>
               </compilerArgs>
             </configuration>
           </execution>
