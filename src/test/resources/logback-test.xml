@@ -21,7 +21,7 @@
       <pattern>%d [%thread] %-5level %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
-  <root level="INFO">
+  <root level="${testLogLevel:-INFO}">
     <appender-ref ref="STDOUT"/>
   </root>
 </configuration>
