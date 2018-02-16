@@ -201,7 +201,7 @@
  *
  * === Rolling updates
  *
- * During rolling udpates, the Infinispan team recommends to replace pods one by one.
+ * During rolling udpates, the Infinispan team http://infinispan.org/docs/stable/user_guide/user_guide.html#using_kubernetes_and_openshift_rolling_updates[recommends] to replace pods one by one.
  *
  * To do so, we must configure Kubernetes to:
  *
