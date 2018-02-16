@@ -240,7 +240,7 @@ HealthChecks checks = HealthChecks.create(vertx)
   .register("ispn-cluster-status", future -> {
     VertxInternal vertxInternal = (VertxInternal) vertx; <1>
     InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager(); <2>
-    DefaultCacheManager cacheManager = (DefaultCacheManager) clusterManager.getCacheContainer(); <3>
+    EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();; <3>
     Health health = cacheManager.getHealth(); <4>
     HealthStatus healthStatus = health.getClusterHealth().getHealthStatus();
     Status status = new Status()
@@ -251,7 +251,7 @@ HealthChecks checks = HealthChecks.create(vertx)
 ----
 <1> Cast the `Vertx` instance to `VertxInternal`; the latter exposes the cluster manager object
 <2> Get the cluster manager object and cast it to `InfinispanClusterManager`
-<3> Unwrap the cache container and cast it to `DefaultCacheManager`
+<3> Unwrap the cache container and cast it to `EmbeddedCacheManager`
 <4> Get the cluster health object
 <5> Check procedure status is `OK` only if status is `HEALTHY`
 <6> For debugging purposes, return the cluster status as a JSON object (optional)
