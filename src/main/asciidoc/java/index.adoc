@@ -202,6 +202,69 @@ oc policy add-role-to-user view system:serviceaccount:$(oc project -q):default -
 
 Further configuration details are available on the https://github.com/jgroups-extras/jgroups-kubernetes[Kubernetes discovery protocol for JGroups repository].
 
+=== Rolling updates
+
+During rolling udpates, the Infinispan team http://infinispan.org/docs/stable/user_guide/user_guide.html#using_kubernetes_and_openshift_rolling_updates[recommends] to replace pods one by one.
+
+To do so, we must configure Kubernetes to:
+
+* never start more than one new pod at once
+* forbid more than one unavailable pod during the process
+
+[source,yaml]
+----
+spec:
+  strategy:
+    type: Rolling
+    rollingParams:
+      updatePeriodSeconds: 10
+      intervalSeconds: 20
+      timeoutSeconds: 600
+      maxUnavailable: 1 <1>
+      maxSurge: 1 <2>
+----
+<1> the maximum number of pods that can be unavailable during the update process
+<2> the maximum number of pods that can be created over the desired number of pods
+
+Also, pod readiness probes must take cluster health into account.
+Indeed, when a node joins or leaves the cluster, Infinispan rebalances the data across members, and it is better to avoid concurrent state transfers.
+When the state transfer completes, the cluster health goes back to `HEALTHY`.
+
+The readiness probe can be implemented with link:../../vertx-health-check/java/[Vert.x Health Checks].
+The health check procedure should test the `DefaultCacheManager` status.
+Here's an example with the Java language:
+
+[source,java]
+----
+HealthChecks checks = HealthChecks.create(vertx)
+  .register("ispn-cluster-status", future -> {
+    VertxInternal vertxInternal = (VertxInternal) vertx; <1>
+    InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager(); <2>
+    EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();; <3>
+    Health health = cacheManager.getHealth(); <4>
+    HealthStatus healthStatus = health.getClusterHealth().getHealthStatus();
+    Status status = new Status()
+      .setOk(healthStatus == HealthStatus.HEALTHY) <5>
+      .setData(JsonObject.mapFrom(health)); <6>
+    future.complete(status);
+  });
+----
+<1> Cast the `Vertx` instance to `VertxInternal`; the latter exposes the cluster manager object
+<2> Get the cluster manager object and cast it to `InfinispanClusterManager`
+<3> Unwrap the cache container and cast it to `EmbeddedCacheManager`
+<4> Get the cluster health object
+<5> Check procedure status is `OK` only if status is `HEALTHY`
+<6> For debugging purposes, return the cluster status as a JSON object (optional)
+
+The health check can be exposed through a link:../../vertx-web/java/[Vert.x Web] `Router`:
+
+[source,java]
+----
+Router router = Router.router(vertx);
+router.get("/health").handler(rc -> rc.response().putHeader(HttpHeaders.CONTENT_TYPE, "text/plain").end("OK"));
+router.get("/ready").handler(HealthCheckHandler.createWithHealthChecks(checks));
+----
+
 == Configuring for Docker Compose
 
 Make sure to start the Java Virtual Machines with those system properties:
