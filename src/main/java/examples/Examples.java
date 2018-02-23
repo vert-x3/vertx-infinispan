@@ -16,13 +16,20 @@
 
 package examples;
 
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.streams.ReadStream;
+import io.vertx.ext.cluster.infinispan.ClusterHealthCheck;
 import io.vertx.ext.cluster.infinispan.InfinispanAsyncMap;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.HealthChecks;
+import io.vertx.ext.healthchecks.Status;
+import io.vertx.ext.web.Router;
 import org.infinispan.manager.DefaultCacheManager;
 
 import java.util.Map;
@@ -65,5 +72,15 @@ public class Examples {
     ReadStream<K> keyStream = infinispanAsyncMap.keyStream();
     ReadStream<V> valueStream = infinispanAsyncMap.valueStream();
     ReadStream<Map.Entry<K, V>> entryReadStream = infinispanAsyncMap.entryStream();
+  }
+
+  public void healthCheck(Vertx vertx) {
+    Handler<Future<Status>> procedure = ClusterHealthCheck.createProcedure(vertx, true);
+    HealthChecks checks = HealthChecks.create(vertx).register("cluster-health", procedure);
+  }
+
+  public void healthCheckHandler(Vertx vertx, HealthChecks checks) {
+    Router router = Router.router(vertx);
+    router.get("/readiness").handler(HealthCheckHandler.createWithHealthChecks(checks));
   }
 }
