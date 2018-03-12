@@ -7,9 +7,9 @@ This implementation is packaged inside:
 [source,xml,subs="+attributes"]
 ----
 <dependency>
-  <groupId>${maven.groupId}</groupId>
-  <artifactId>${maven.artifactId}</artifactId>
-  <version>${maven.version}</version>
+  <groupId>io.vertx</groupId>
+  <artifactId>vertx-infinispan</artifactId>
+  <version>3.6.0-SNAPSHOT</version>
 </dependency>
 ----
 
@@ -25,11 +25,11 @@ Cluster managers *do not* handle the event bus inter-node transport, this is don
 
 == Using this cluster manager
 
-If you are using Vert.x from the command line, the jar corresponding to this cluster manager (it will be named `${maven.artifactId}-${maven.version}.jar`
+If you are using Vert.x from the command line, the jar corresponding to this cluster manager (it will be named `vertx-infinispan-3.6.0-SNAPSHOT.jar`
 should be in the `lib` directory of the Vert.x installation.
 
 If you want clustering with this cluster manager in your Vert.x Maven or Gradle project then just add a dependency to
-the artifact: `${maven.groupId}:${maven.artifactId}:${maven.version}` in your project.
+the artifact: `io.vertx:vertx-infinispan:3.6.0-SNAPSHOT` in your project.
 
 If the jar is on your classpath as above then Vert.x will automatically detect this and use it as the cluster manager.
 Please make sure you don't have any other cluster managers on your classpath or Vert.x might
@@ -38,9 +38,23 @@ choose the wrong one.
 You can also specify the cluster manager programmatically if you are embedding Vert.x by specifying it on the options
 when you are creating your Vert.x instance, for example:
 
-[source,$lang]
+[source,js]
 ----
-{@link examples.Examples#createClusterManagerProgramatically()}
+var Vertx = require("vertx-js/vertx");
+var mgr = new (Java.type("io.vertx.ext.cluster.infinispan.InfinispanClusterManager"))();
+
+var options = {
+  "clusterManager" : mgr
+};
+
+Vertx.clusteredVertx(options, function (res, res_err) {
+  if (res_err == null) {
+    var vertx = res;
+  } else {
+    // failed!
+  }
+});
+
 ----
 
 == Configuring this cluster manager
@@ -93,9 +107,23 @@ Infinispan / JGroups documentations.
 
 You can pass an existing `DefaultCacheManager` in the cluster manager to reuse an existing cache manager:
 
-[source,$lang]
+[source,js]
 ----
-{@link examples.Examples#useExistingCacheManager(org.infinispan.manager.DefaultCacheManager)}
+var Vertx = require("vertx-js/vertx");
+var mgr = new (Java.type("io.vertx.ext.cluster.infinispan.InfinispanClusterManager"))(cacheManager);
+
+var options = {
+  "clusterManager" : mgr
+};
+
+Vertx.clusteredVertx(options, function (res, res_err) {
+  if (res_err == null) {
+    var vertx = res;
+  } else {
+    // failed!
+  }
+});
+
 ----
 
 In this case, vert.x is not the cache manager owner and so do not shut it down on close.
@@ -210,18 +238,26 @@ Also, pod readiness probe must take cluster health into account.
 Indeed, when a node joins or leaves the cluster, Infinispan rebalances the data across members, and it is better to avoid concurrent state transfers.
 When the state transfer completes, the cluster health goes back to `HEALTHY`.
 
-The readiness probe can be implemented with link:../../vertx-health-check/$lang/[Vert.x Health Checks]:
+The readiness probe can be implemented with link:../../vertx-health-check/js/[Vert.x Health Checks]:
 
-[source,$lang]
+[source,js]
 ----
-{@link examples.Examples#healthCheck(io.vertx.core.Vertx)}
+var ClusterHealthCheck = require("vertx-infinispan-js/cluster_health_check");
+var HealthChecks = require("vertx-health-checks-js/health_checks");
+var procedure = ClusterHealthCheck.createProcedure(vertx, true);
+var checks = HealthChecks.create(vertx).register("cluster-health", procedure);
+
 ----
 
-After creation, it can be exposed over HTTP with a link:../../vertx-web/$lang/[Vert.x Web] router handler:
+After creation, it can be exposed over HTTP with a link:../../vertx-web/js/[Vert.x Web] router handler:
 
-[source,$lang]
+[source,js]
 ----
-{@link examples.Examples#healthCheckHandler(io.vertx.core.Vertx, io.vertx.ext.healthchecks.HealthChecks)}
+var Router = require("vertx-web-js/router");
+var HealthCheckHandler = require("vertx-health-checks-js/health_check_handler");
+var router = Router.router(vertx);
+router.get("/readiness").handler(HealthCheckHandler.createWithHealthChecks(checks).handle);
+
 ----
 
 == Configuring for Docker Compose
@@ -278,7 +314,7 @@ vertx run myverticle.js -cluster -cluster-host your-ip-address
 Where `your-ip-address` is the same IP address you specified in the JGroups configuration.
 
 If using Vert.x programmatically you can specify this using
-{@link io.vertx.core.VertxOptions#setClusterHost(java.lang.String)}.
+`link:../../vertx-core/dataobjects.html#VertxOptions#setClusterHost[clusterHost]`.
 
 === Using a VPN
 
@@ -353,7 +389,12 @@ more details or want to implement your own logging backend implementation.
 The `InfinispanAsyncMap` API allows to retrieve keys, values and entries as streams.
 This can be useful if you need to go through the content of a large map for bulk processing.
 
-[source,$lang]
+[source,js]
 ----
-{@link examples.Examples#asyncMapStreams(io.vertx.core.shareddata.AsyncMap)}
+var InfinispanAsyncMap = require("vertx-infinispan-js/infinispan_async_map");
+var infinispanAsyncMap = InfinispanAsyncMap.unwrap(asyncMap);
+var keyStream = infinispanAsyncMap.keyStream();
+var valueStream = infinispanAsyncMap.valueStream();
+var entryReadStream = infinispanAsyncMap.entryStream();
+
 ----
