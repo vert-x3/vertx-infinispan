@@ -31,30 +31,31 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.spi.cluster.NodeListener;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMapImpl;
 import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap;
-import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap.MultiMapKey;
-import io.vertx.ext.cluster.infinispan.impl.JGroupsCounter;
-import io.vertx.ext.cluster.infinispan.impl.JGroupsLock;
+import io.vertx.ext.cluster.infinispan.impl.InfinispanCounter;
+import io.vertx.ext.cluster.infinispan.impl.InfinispanLock;
 import org.infinispan.Cache;
 import org.infinispan.commons.api.BasicCacheContainer;
 import org.infinispan.commons.util.FileLookup;
 import org.infinispan.commons.util.FileLookupFactory;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
+import org.infinispan.counter.EmbeddedCounterManagerFactory;
+import org.infinispan.counter.api.CounterConfiguration;
+import org.infinispan.counter.api.CounterManager;
+import org.infinispan.counter.api.CounterType;
+import org.infinispan.lock.EmbeddedClusteredLockManagerFactory;
+import org.infinispan.lock.api.ClusteredLock;
+import org.infinispan.lock.impl.manager.EmbeddedClusteredLockManager;
 import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.multimap.api.embedded.EmbeddedMultimapCacheManagerFactory;
+import org.infinispan.multimap.impl.EmbeddedMultimapCache;
+import org.infinispan.multimap.impl.EmbeddedMultimapCacheManager;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachemanagerlistener.annotation.Merged;
 import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
-import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
-import org.jgroups.JChannel;
-import org.jgroups.blocks.atomic.CounterService;
-import org.jgroups.blocks.locking.LockService;
-import org.jgroups.fork.ForkChannel;
-import org.jgroups.protocols.CENTRAL_LOCK;
-import org.jgroups.protocols.COUNTER;
-import org.jgroups.stack.Protocol;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,10 +66,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.*;
-import static org.jgroups.stack.ProtocolStack.Position.*;
 
 /**
  * @author Thomas Segismont
@@ -89,13 +90,13 @@ public class InfinispanClusterManager implements ClusterManager {
   private Vertx vertx;
   private DefaultCacheManager cacheManager;
   private NodeListener nodeListener;
-  private CounterService counterService;
-  private LockService lockService;
+  private EmbeddedMultimapCacheManager<Object, Object> multimapCacheManager;
+  private EmbeddedClusteredLockManager lockManager;
+  private CounterManager counterManager;
   private volatile boolean active;
   private ClusterViewListener viewListener;
   // Guarded by this
   private Set<InfinispanAsyncMultiMap> multimaps = Collections.newSetFromMap(new WeakHashMap<>(1));
-  private ForkChannel forkChannel;
 
   /**
    * Creates a new cluster manager configured with {@code infinispan.xml} and {@code jgroups.xml} files.
@@ -132,8 +133,8 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
-      Cache<MultiMapKey, Object> cache = cacheManager.getCache(name);
-      InfinispanAsyncMultiMap<K, V> asyncMultiMap = new InfinispanAsyncMultiMap<>(vertx, cache);
+      EmbeddedMultimapCache<Object, Object> multimapCache = (EmbeddedMultimapCache<Object, Object>) multimapCacheManager.get(name);
+      InfinispanAsyncMultiMap<K, V> asyncMultiMap = new InfinispanAsyncMultiMap<>(vertx, multimapCache);
       synchronized (this) {
         multimaps.add(asyncMultiMap);
       }
@@ -159,13 +160,18 @@ public class InfinispanClusterManager implements ClusterManager {
     ContextImpl context = (ContextImpl) vertx.getOrCreateContext();
     // Ordered on the internal blocking executor
     context.executeBlocking(() -> {
-      java.util.concurrent.locks.Lock lock = lockService.getLock(name);
+      if (!lockManager.isDefined(name)) {
+        lockManager.defineLock(name);
+      }
+      ClusteredLock lock = lockManager.get(name);
       try {
-        if (lock.tryLock(timeout, TimeUnit.MILLISECONDS)) {
-          return new JGroupsLock(vertx, lock);
+        if (lock.tryLock(timeout, TimeUnit.MILLISECONDS).get() == Boolean.TRUE) {
+          return new InfinispanLock(lock);
         } else {
           throw new VertxException("Timed out waiting to get lock " + name);
         }
+      } catch (ExecutionException e) {
+        throw new VertxException(e.getCause());
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new VertxException(e);
@@ -176,7 +182,10 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public void getCounter(String name, Handler<AsyncResult<Counter>> resultHandler) {
     vertx.executeBlocking(future -> {
-      future.complete(new JGroupsCounter(vertx, counterService.getOrCreateCounter(name, 0)));
+      if (!counterManager.isDefined(name)) {
+        counterManager.defineCounter(name, CounterConfiguration.builder(CounterType.UNBOUNDED_STRONG).build());
+      }
+      future.complete(new InfinispanCounter(vertx, counterManager.getStrongCounter(name).sync()));
     }, false, resultHandler);
   }
 
@@ -237,20 +246,10 @@ public class InfinispanClusterManager implements ClusterManager {
       }
       viewListener = new ClusterViewListener();
       cacheManager.addListener(viewListener);
-      JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
-      JChannel channel = transport.getChannel();
-      CENTRAL_LOCK centralLock = new CENTRAL_LOCK();
-      centralLock.setValue("use_thread_id_for_lock_owner", Boolean.FALSE);
-      centralLock.setBypassBundling(true);
-      COUNTER counter = new COUNTER();
-      counter.setBypassBundling(true);
-      Protocol[] protocols = new Protocol[]{centralLock, counter};
-      Class<? extends Protocol> topProtocol = channel.getProtocolStack().getTopProtocol().getClass();
       try {
-        forkChannel = new ForkChannel(channel, "vertx-infinispan-stack", "vertx-infinispan-channel", true, ABOVE, topProtocol, protocols);
-        forkChannel.connect("ignored");
-        counterService = new CounterService(forkChannel);
-        lockService = new LockService(forkChannel);
+        multimapCacheManager = (EmbeddedMultimapCacheManager<Object, Object>) EmbeddedMultimapCacheManagerFactory.from(cacheManager);
+        lockManager = (EmbeddedClusteredLockManager) EmbeddedClusteredLockManagerFactory.from(cacheManager);
+        counterManager = EmbeddedCounterManagerFactory.asCounterManager(cacheManager);
         future.complete();
       } catch (Exception e) {
         future.fail(e);
@@ -279,7 +278,6 @@ public class InfinispanClusterManager implements ClusterManager {
         return;
       }
       active = false;
-      forkChannel.close();
       cacheManager.removeListener(viewListener);
       if (!userProvidedCacheManager) {
         cacheManager.stop();
