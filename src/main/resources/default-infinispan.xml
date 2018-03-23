@@ -23,18 +23,12 @@
     <stack-file name="jgroups" path="default-configs/default-jgroups-tcp.xml"/>
   </jgroups>
 
-  <cache-container default-cache="__vertx.distributed.cache">
-
+  <cache-container default-cache="distributed-cache">
     <transport stack="jgroups"/>
-
-    <replicated-cache name="__vertx.haInfo">
-      <expiration interval="-1"/>
-    </replicated-cache>
-
-    <distributed-cache name="__vertx.distributed.cache">
-      <expiration interval="-1"/>
-    </distributed-cache>
-
+    <distributed-cache name="distributed-cache"/>
+    <distributed-cache name="__vertx.subs"/>
+    <replicated-cache name="__vertx.haInfo"/>
+    <distributed-cache-configuration name="__vertx.distributed.cache.configuration"/>
   </cache-container>
 
 </infinispan>
