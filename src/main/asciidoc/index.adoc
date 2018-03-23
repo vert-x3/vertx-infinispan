@@ -104,16 +104,11 @@ Notice that the custom Infinispan instance need to be configured with:
 
 [source,xml]
 ----
-<cache-container default-cache="__vertx.distributed.cache">
-
-  <replicated-cache name="__vertx.haInfo">
-    <expiration interval="-1"/>
-  </replicated-cache>
-
-  <distributed-cache name="__vertx.distributed.cache">
-    <expiration interval="-1"/>
-  </distributed-cache>
-
+<cache-container default-cache="distributed-cache">
+  <distributed-cache name="distributed-cache"/>
+  <distributed-cache name="__vertx.subs"/>
+  <replicated-cache name="__vertx.haInfo"/>
+  <distributed-cache-configuration name="__vertx.distributed.cache.configuration"/>
 </cache-container>
 ----
 

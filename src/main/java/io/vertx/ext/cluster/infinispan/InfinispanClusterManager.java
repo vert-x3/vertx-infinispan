@@ -47,6 +47,7 @@ import org.infinispan.lock.EmbeddedClusteredLockManagerFactory;
 import org.infinispan.lock.api.ClusteredLock;
 import org.infinispan.lock.impl.manager.EmbeddedClusteredLockManager;
 import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.manager.EmbeddedCacheManagerAdmin;
 import org.infinispan.multimap.api.embedded.EmbeddedMultimapCacheManagerFactory;
 import org.infinispan.multimap.impl.EmbeddedMultimapCache;
 import org.infinispan.multimap.impl.EmbeddedMultimapCacheManager;
@@ -145,7 +146,8 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMap(String name, Handler<AsyncResult<AsyncMap<K, V>>> resultHandler) {
     vertx.executeBlocking(future -> {
-      Cache<Object, Object> cache = cacheManager.getCache(name);
+      EmbeddedCacheManagerAdmin administration = cacheManager.administration();
+      Cache<Object, Object> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
       future.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
     }, false, resultHandler);
   }
