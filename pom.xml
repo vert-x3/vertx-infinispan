@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.vertx</groupId>
     <artifactId>vertx-ext-parent</artifactId>
-    <version>29</version>
+    <version>34</version>
   </parent>
 
   <artifactId>vertx-infinispan</artifactId>
@@ -160,30 +160,25 @@
   </dependencies>
 
   <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.bsc.maven</groupId>
+          <artifactId>maven-processor-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>generate-sources</id>
+              <configuration>
+                <optionMap>
+                  <infinispan.version>${infinispan.version}</infinispan.version>
+                </optionMap>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default-compile</id>
-            <configuration>
-              <annotationProcessors>
-                <annotationProcessor>io.vertx.docgen.JavaDocGenProcessor</annotationProcessor>
-              </annotationProcessors>
-              <compilerArgs>
-                <arg>-Adocgen.source=${asciidoc.dir}/*.adoc</arg>
-                <arg>-Adocgen.output=${project.build.directory}/asciidoc/$lang</arg>
-                <arg>-Amaven.groupId=${project.groupId}</arg>
-                <arg>-Amaven.artifactId=${project.artifactId}</arg>
-                <arg>-Amaven.version=${project.version}</arg>
-                <arg>-Ainfinispan.version=${infinispan.version}</arg>
-                <arg>-Ajgroups.kubernetes.version=${jgroups.kubernetes.version}</arg>
-              </compilerArgs>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
