@@ -161,14 +161,14 @@ public class InfinispanClusterManager implements ClusterManager {
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> resultHandler) {
     ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
     // Ordered on the internal blocking executor
-    context.executeBlocking(() -> {
+    context.executeBlockingInternal(fut-> {
       if (!lockManager.isDefined(name)) {
         lockManager.defineLock(name);
       }
       ClusteredLock lock = lockManager.get(name);
       try {
         if (lock.tryLock(timeout, TimeUnit.MILLISECONDS).get() == Boolean.TRUE) {
-          return new InfinispanLock(lock);
+          fut.complete(new InfinispanLock(lock));
         } else {
           throw new VertxException("Timed out waiting to get lock " + name);
         }
