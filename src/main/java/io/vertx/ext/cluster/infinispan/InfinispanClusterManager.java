@@ -20,7 +20,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxException;
-import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -159,9 +158,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> resultHandler) {
-    ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
-    // Ordered on the internal blocking executor
-    context.executeBlockingInternal(fut-> {
+    vertx.executeBlocking(fut -> {
       if (!lockManager.isDefined(name)) {
         lockManager.defineLock(name);
       }
@@ -178,7 +175,7 @@ public class InfinispanClusterManager implements ClusterManager {
         Thread.currentThread().interrupt();
         throw new VertxException(e);
       }
-    }, resultHandler);
+    }, false, resultHandler);
   }
 
   @Override
