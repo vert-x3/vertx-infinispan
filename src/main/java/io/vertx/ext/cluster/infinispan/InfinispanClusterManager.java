@@ -17,10 +17,10 @@
 package io.vertx.ext.cluster.infinispan;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxException;
-import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -67,7 +67,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.*;
@@ -159,26 +158,28 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> resultHandler) {
-    ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
-    // Ordered on the internal blocking executor
-    context.executeBlockingInternal(fut-> {
+    vertx.<ClusteredLock>executeBlocking(fut -> {
       if (!lockManager.isDefined(name)) {
         lockManager.defineLock(name);
       }
-      ClusteredLock lock = lockManager.get(name);
-      try {
-        if (lock.tryLock(timeout, TimeUnit.MILLISECONDS).get() == Boolean.TRUE) {
-          fut.complete(new InfinispanLock(lock));
-        } else {
-          throw new VertxException("Timed out waiting to get lock " + name);
-        }
-      } catch (ExecutionException e) {
-        throw new VertxException(e.getCause());
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new VertxException(e);
+      fut.complete(lockManager.get(name));
+    }, false, ar -> {
+      if (ar.failed()) {
+        resultHandler.handle(Future.failedFuture(ar.cause()));
+      } else {
+        ClusteredLock lock = ar.result();
+        Context context = vertx.getOrCreateContext();
+        lock.tryLock(timeout, TimeUnit.MILLISECONDS).whenCompleteAsync((locked, throwable) -> {
+          if (throwable != null) {
+            resultHandler.handle(Future.failedFuture(throwable));
+          } else if (locked == Boolean.TRUE) {
+            resultHandler.handle(Future.succeededFuture(new InfinispanLock(lock)));
+          } else {
+            resultHandler.handle(Future.failedFuture("Timed out waiting to get lock " + name));
+          }
+        }, command -> context.runOnContext(v -> command.run()));
       }
-    }, resultHandler);
+    });
   }
 
   @Override
