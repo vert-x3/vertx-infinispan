@@ -47,7 +47,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
   private Handler<O> dataHandler;
   private Handler<Throwable> exceptionHandler;
   private Handler<Void> endHandler;
-  private boolean paused;
+  private long demand = Long.MAX_VALUE;
   private boolean readInProgress;
   private boolean closed;
 
@@ -95,26 +95,34 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
   }
 
   private boolean canRead() {
-    return !paused && !closed;
+    return demand > 0L && !closed;
   }
 
   @Override
   public synchronized CloseableIteratorCollectionStream<I, O> pause() {
     checkClosed();
-    paused = true;
+    demand = 0L;
     return this;
   }
 
   @Override
-  public synchronized CloseableIteratorCollectionStream<I, O> resume() {
+  public CloseableIteratorCollectionStream<I, O> fetch(long amount) {
     checkClosed();
-    if (paused) {
-      paused = false;
+    if (amount > 0L) {
+      demand += amount;
+      if (demand < 0L) {
+        demand = Long.MAX_VALUE;
+      }
       if (dataHandler != null) {
         doRead();
       }
     }
     return this;
+  }
+
+  @Override
+  public synchronized CloseableIteratorCollectionStream<I, O> resume() {
+    return fetch(Long.MAX_VALUE);
   }
 
   private synchronized void doRead() {
@@ -180,6 +188,9 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
 
   private synchronized void emitQueued() {
     while (!queue.isEmpty() && canRead()) {
+      if (demand != Long.MAX_VALUE) {
+        demand--;
+      }
       dataHandler.handle(converter.apply(queue.remove()));
     }
     readInProgress = false;
