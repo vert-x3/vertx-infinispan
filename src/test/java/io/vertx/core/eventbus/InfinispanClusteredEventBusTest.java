@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Red Hat, Inc.
+ * Copyright 2018 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -14,19 +14,14 @@
  * under the License.
  */
 
-package io.vertx.ext.cluster.infinispan.test;
+package io.vertx.core.eventbus;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
+import io.vertx.core.*;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
-import io.vertx.test.core.ComplexHATest;
 import org.infinispan.health.Health;
 import org.infinispan.health.HealthStatus;
 import org.infinispan.manager.EmbeddedCacheManager;
@@ -37,14 +32,15 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 /**
  * @author Thomas Segismont
  */
-public class InfinispanComplexHATest extends ComplexHATest {
+public class InfinispanClusteredEventBusTest extends ClusteredEventBusTest {
 
-  private static final Logger log = LoggerFactory.getLogger(InfinispanComplexHATest.class);
+  private static final Logger log = LoggerFactory.getLogger(InfinispanClusteredEventBusTest.class);
 
   @Override
   public void setUp() throws Exception {
@@ -77,6 +73,7 @@ public class InfinispanComplexHATest extends ComplexHATest {
   protected ClusterManager getClusterManager() {
     return new InfinispanClusterManager();
   }
+
 
   @Override
   protected void closeClustered(List<Vertx> clustered) throws Exception {
