@@ -16,6 +16,7 @@
 
 package io.vertx.core.shareddata;
 
+import io.vertx.LoggingTestWatcher;
 import io.vertx.core.*;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.impl.VertxInternal;
@@ -29,6 +30,7 @@ import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.infinispan.health.Health;
 import org.infinispan.health.HealthStatus;
 import org.infinispan.manager.EmbeddedCacheManager;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -50,6 +52,9 @@ import static java.util.concurrent.TimeUnit.*;
 public class InfinispanClusteredAsyncMapTest extends ClusteredAsyncMapTest {
 
   private static final Logger log = LoggerFactory.getLogger(InfinispanClusteredAsyncMapTest.class);
+
+  @Rule
+  public LoggingTestWatcher watchman = new LoggingTestWatcher();
 
   @Override
   public void setUp() throws Exception {

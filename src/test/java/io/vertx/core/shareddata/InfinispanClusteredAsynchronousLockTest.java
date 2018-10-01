@@ -16,6 +16,7 @@
 
 package io.vertx.core.shareddata;
 
+import io.vertx.LoggingTestWatcher;
 import io.vertx.core.*;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.logging.Logger;
@@ -25,6 +26,7 @@ import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.infinispan.health.Health;
 import org.infinispan.health.HealthStatus;
 import org.infinispan.manager.EmbeddedCacheManager;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -42,6 +44,9 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 public class InfinispanClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
 
   private static final Logger log = LoggerFactory.getLogger(InfinispanClusteredAsynchronousLockTest.class);
+
+  @Rule
+  public LoggingTestWatcher watchman = new LoggingTestWatcher();
 
   @Override
   public void setUp() throws Exception {
