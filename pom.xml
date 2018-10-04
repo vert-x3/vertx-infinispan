@@ -62,6 +62,12 @@
       <artifactId>infinispan-multimap</artifactId>
       <version>${infinispan.version}</version>
     </dependency>
+    <!-- Same version as Peeble template engine -->
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <version>2.6.2</version>
+    </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-clustered-lock</artifactId>
@@ -76,7 +82,7 @@
     <dependency>
       <groupId>io.reactivex.rxjava2</groupId>
       <artifactId>rxjava</artifactId>
-      <version>2.1.9</version>
+      <version>2.2.1</version>
     </dependency>
 
     <dependency>
