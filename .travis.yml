@@ -8,7 +8,7 @@ jobs:
   include:
   - stage: test
     name: "Unit tests - OracleJDK 8"
-    script: mvn -B -DtestLogLevel=DEBUG test
+    script: mvn -B -DtestLogLevel=INFO test
     jdk: oraclejdk8
   - stage: deploy
     name: "Deploy to Sonatype's snapshots repository"
