@@ -16,10 +16,10 @@
 
 package io.vertx.core.shareddata;
 
+import io.vertx.Lifecycle;
 import io.vertx.LoggingTestWatcher;
 import io.vertx.core.*;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -27,9 +27,6 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.cluster.infinispan.InfinispanAsyncMap;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
-import org.infinispan.health.Health;
-import org.infinispan.health.HealthStatus;
-import org.infinispan.manager.EmbeddedCacheManager;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -44,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
  * @author Thomas Segismont
@@ -172,27 +169,6 @@ public class InfinispanClusteredAsyncMapTest extends ClusteredAsyncMapTest {
 
   @Override
   protected void closeClustered(List<Vertx> clustered) throws Exception {
-    for (Vertx clusteredVertx : clustered) {
-      VertxInternal vertxInternal = (VertxInternal) clusteredVertx;
-      InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager();
-      EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
-      Health health = cacheManager.getHealth();
-      long start = System.currentTimeMillis();
-      try {
-        while (health.getClusterHealth().getHealthStatus() != HealthStatus.HEALTHY
-          && System.currentTimeMillis() - start < MILLISECONDS.convert(2, MINUTES)) {
-          MILLISECONDS.sleep(100);
-        }
-      } catch (Exception ignore) {
-      }
-      CountDownLatch latch = new CountDownLatch(1);
-      vertxInternal.close(ar -> {
-        if (ar.failed()) {
-          log.error("Failed to shutdown vert.x", ar.cause());
-        }
-        latch.countDown();
-      });
-      latch.await(2, TimeUnit.MINUTES);
-    }
+    Lifecycle.closeClustered(clustered);
   }
 }
