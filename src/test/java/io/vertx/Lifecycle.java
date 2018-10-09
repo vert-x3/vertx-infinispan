@@ -46,7 +46,7 @@ public class Lifecycle {
       EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
       Health health = cacheManager.getHealth();
 
-      SECONDS.sleep(1); // Make sure rebalancing has been triggered
+      SECONDS.sleep(2); // Make sure rebalancing has been triggered
 
       long start = System.currentTimeMillis();
       try {
