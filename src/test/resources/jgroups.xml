@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2017 Red Hat, Inc.
+  ~ Copyright 2018 Red Hat, Inc.
   ~
   ~ Red Hat licenses this file to you under the Apache License, version 2.0
   ~ (the "License"); you may not use this file except in compliance with the
@@ -38,11 +38,12 @@
           max_interval="30000"
   />
   <FD_SOCK/>
-  <FD_ALL timeout="60000"
-          interval="15000"
-          timeout_check_interval="5000"
+  <!-- Suspect node `timeout` to `timeout + timeout_check_interval` millis after the last heartbeat -->
+  <FD_ALL timeout="10000"
+          interval="2000"
+          timeout_check_interval="1000"
   />
-  <VERIFY_SUSPECT timeout="5000"/>
+  <VERIFY_SUSPECT timeout="1000"/>
   <pbcast.NAKACK2 use_mcast_xmit="false"
                   xmit_interval="100"
                   xmit_table_num_rows="50"
@@ -54,7 +55,6 @@
             xmit_table_num_rows="50"
             xmit_table_msgs_per_row="1024"
             xmit_table_max_compaction_time="30000"
-            conn_expiry_timeout="0"
   />
   <pbcast.STABLE stability_delay="500"
                  desired_avg_gossip="5000"
@@ -62,7 +62,6 @@
   />
   <AUTH auth_class="org.jgroups.auth.SimpleToken" auth_value="${vertx.infinispan.test.auth.token:default-token}"/>
   <pbcast.GMS print_local_addr="false"
-              install_view_locally_first="true"
               join_timeout="${jgroups.join_timeout:5000}"
   />
   <MFC max_credits="2m"
