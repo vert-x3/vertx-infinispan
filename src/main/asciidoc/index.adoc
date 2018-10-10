@@ -198,22 +198,7 @@ spec:
 <2> the maximum number of pods that can be created over the desired number of pods
 
 Also, pod readiness probe must take cluster health into account.
-Indeed, when a node joins or leaves the cluster, Infinispan rebalances the data across members, and it is better to avoid concurrent state transfers.
-When the state transfer completes, the cluster health goes back to `HEALTHY`.
-
-The readiness probe can be implemented with link:../../vertx-health-check/$lang/[Vert.x Health Checks]:
-
-[source,$lang]
-----
-{@link examples.Examples#healthCheck(io.vertx.core.Vertx)}
-----
-
-After creation, it can be exposed over HTTP with a link:../../vertx-web/$lang/[Vert.x Web] router handler:
-
-[source,$lang]
-----
-{@link examples.Examples#healthCheckHandler(io.vertx.core.Vertx, io.vertx.ext.healthchecks.HealthChecks)}
-----
+Please refer to the <<one-by-one, cluster administration>> section for details on how to implement a readiness probe with link:../../vertx-health-check/$lang/[Vert.x Health Checks].
 
 == Configuring for Docker Compose
 
@@ -347,4 +332,69 @@ This can be useful if you need to go through the content of a large map for bulk
 [source,$lang]
 ----
 {@link examples.Examples#asyncMapStreams(io.vertx.core.shareddata.AsyncMap)}
+----
+
+== Cluster administration
+
+The Infinispan cluster manager works by turning Vert.x nodes into members of an Infinispan cluster.
+As a consequence, Vert.x cluster manager administration should follow the Infinispan management guidelines.
+
+First, let's take a step back and introduce rebalancing and split-brain syndrome.
+
+=== Rebalancing
+
+Each Vert.x node holds pieces of the clustering data: eventbus subscriptions, async map entries, clustered counters... etc.
+
+When a member joins or leaves the cluster, Infinispan rebalances cache entries on the new set of members.
+In other words, it moves data around to accomodate the new cluster topology.
+This process may take some time, depending on the amount of clustered data and number of nodes.
+
+=== Split-brain syndrome
+
+In a perfect world, there would be no network equipment failures.
+Reality is, though, that sooner or later your cluster will be divided into smaller groups, unable to see each others.
+
+Infinispan is capable of merging the nodes back into a single cluster.
+But just as with rebalancing, this process may take some time.
+Before the cluster is fully functional again, some eventbus consumers might not be able to get messages.
+Or high-availability may not be able to redeploy a failing verticle.
+
+[NOTE]
+====
+It is difficult (if possible at all) to make a difference between a network partition and:
+
+- long GC pauses (leading to missed pings),
+- many nodes being killed forcefully, at-once, because you are deploying a new version of your application
+====
+
+=== Recommendations
+
+Considering the common clustering issues discussed above, it is recommended to stick to the following good practices.
+
+==== Graceful shutdown
+
+Avoid stopping members forcefully (e.g, `kill -9` a node).
+
+Of course process crashes are inevitable, but a graceful shutdown helps to get the remaining nodes in a stable state faster.
+
+[[one-by-one]]
+==== One node after the other
+
+When rolling a new version of your app, scaling-up or down your cluster, add or remove nodes one after the other.
+
+Stopping nodes one by one prevents the cluster from thinking a network partition occured.
+Adding them one by one allows for clean, incremental rebalancing operations.
+
+The cluster healthiness can be verified with link:../../vertx-health-check/$lang/[Vert.x Health Checks]:
+
+[source,$lang]
+----
+{@link examples.Examples#healthCheck(io.vertx.core.Vertx)}
+----
+
+After creation, the health check can be exposed over HTTP with a link:../../vertx-web/$lang/[Vert.x Web] router handler:
+
+[source,$lang]
+----
+{@link examples.Examples#healthCheckHandler(io.vertx.core.Vertx, io.vertx.ext.healthchecks.HealthChecks)}
 ----
