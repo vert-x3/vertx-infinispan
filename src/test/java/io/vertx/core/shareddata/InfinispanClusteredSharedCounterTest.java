@@ -23,6 +23,7 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
+import org.junit.Ignore;
 import org.junit.Rule;
 
 import java.math.BigInteger;
@@ -34,6 +35,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
+// Ignore clustered counter tests until ISPN-9608 is resolved
+@Ignore
 public class InfinispanClusteredSharedCounterTest extends ClusteredSharedCounterTest {
 
   private static final Logger log = LoggerFactory.getLogger(InfinispanClusteredSharedCounterTest.class);
