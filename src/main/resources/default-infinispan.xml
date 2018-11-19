@@ -27,7 +27,7 @@
     <transport stack="jgroups"/>
     <distributed-cache name="distributed-cache"/>
     <distributed-cache name="__vertx.subs"/>
-    <replicated-cache name="__vertx.haInfo"/>
+    <distributed-cache name="__vertx.haInfo" owners="2147483647"/>
     <distributed-cache-configuration name="__vertx.distributed.cache.configuration"/>
   </cache-container>
 
