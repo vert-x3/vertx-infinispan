@@ -23,12 +23,12 @@
   </parent>
 
   <artifactId>vertx-infinispan</artifactId>
-  <version>3.6.3</version>
+  <version>3.6.4-SNAPSHOT</version>
 
   <name>Vert.x Infinispan Cluster Manager</name>
 
   <properties>
-    <stack.version>3.6.3</stack.version>
+    <stack.version>3.6.4-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
     <infinispan.version>9.4.0.Final</infinispan.version>
     <jgroups.kubernetes.version>1.0.7.Final</jgroups.kubernetes.version>
