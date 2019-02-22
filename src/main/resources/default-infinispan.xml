@@ -29,6 +29,9 @@
     <distributed-cache name="__vertx.subs"/>
     <replicated-cache name="__vertx.haInfo"/>
     <distributed-cache-configuration name="__vertx.distributed.cache.configuration"/>
+    <clustered-locks xmlns="urn:infinispan:config:clustered-locks:9.4"
+                     reliability="CONSISTENT">
+    </clustered-locks>
   </cache-container>
 
 </infinispan>

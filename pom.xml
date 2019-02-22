@@ -30,7 +30,7 @@
   <properties>
     <stack.version>3.7.0-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
-    <infinispan.version>9.4.0.Final</infinispan.version>
+    <infinispan.version>9.4.8.Final</infinispan.version>
     <jgroups.kubernetes.version>1.0.7.Final</jgroups.kubernetes.version>
   </properties>
 
