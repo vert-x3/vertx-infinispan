@@ -16,7 +16,7 @@
 
 package io.vertx.ext.cluster.infinispan.test;
 
-import io.vertx.core.logging.Logger;
+import io.vertx.core.impl.logging.Logger;
 import org.jgroups.logging.Log;
 
 import java.util.function.Consumer;
@@ -34,17 +34,17 @@ public class JGroupsLoggerAdapter implements Log {
 
   @Override
   public boolean isFatalEnabled() {
-    return logger.isInfoEnabled();
+    return logger.isWarnEnabled();
   }
 
   @Override
   public boolean isErrorEnabled() {
-    return logger.isInfoEnabled();
+    return logger.isWarnEnabled();
   }
 
   @Override
   public boolean isWarnEnabled() {
-    return logger.isInfoEnabled();
+    return logger.isWarnEnabled();
   }
 
   @Override
@@ -64,33 +64,17 @@ public class JGroupsLoggerAdapter implements Log {
 
   @Override
   public void fatal(String msg) {
-    logger.fatal(msg);
+    error(msg);
   }
 
   @Override
   public void fatal(String msg, Object... args) {
-    if (!logger.isInfoEnabled()) {
-      return;
-    }
-    withComputedText(msg, args, logger::fatal);
-  }
-
-  private void withComputedText(String msg, Object[] args, Consumer<String> consumer) {
-    try {
-      String text;
-      if (args == null || args.length == 0) {
-        text = msg;
-      } else {
-        text = String.format(msg, args);
-      }
-      consumer.accept(text);
-    } catch (Throwable ignored) {
-    }
+    error(msg, args);
   }
 
   @Override
   public void fatal(String msg, Throwable throwable) {
-    logger.fatal(msg, throwable);
+    error(msg, throwable);
   }
 
   @Override
@@ -100,10 +84,9 @@ public class JGroupsLoggerAdapter implements Log {
 
   @Override
   public void error(String format, Object... args) {
-    if (!logger.isInfoEnabled()) {
-      return;
+    if (logger.isWarnEnabled()) {
+      withComputedText(format, args, logger::error);
     }
-    withComputedText(format, args, logger::error);
   }
 
   @Override
@@ -118,10 +101,9 @@ public class JGroupsLoggerAdapter implements Log {
 
   @Override
   public void warn(String msg, Object... args) {
-    if (!logger.isInfoEnabled()) {
-      return;
+    if (logger.isWarnEnabled()) {
+      withComputedText(msg, args, logger::warn);
     }
-    withComputedText(msg, args, logger::warn);
   }
 
   @Override
@@ -136,10 +118,9 @@ public class JGroupsLoggerAdapter implements Log {
 
   @Override
   public void info(String msg, Object... args) {
-    if (!logger.isInfoEnabled()) {
-      return;
+    if (logger.isInfoEnabled()) {
+      withComputedText(msg, args, logger::info);
     }
-    withComputedText(msg, args, logger::info);
   }
 
   @Override
@@ -149,10 +130,9 @@ public class JGroupsLoggerAdapter implements Log {
 
   @Override
   public void debug(String msg, Object... args) {
-    if (!logger.isDebugEnabled()) {
-      return;
+    if (logger.isDebugEnabled()) {
+      withComputedText(msg, args, logger::debug);
     }
-    withComputedText(msg, args, logger::debug);
   }
 
   @Override
@@ -172,10 +152,9 @@ public class JGroupsLoggerAdapter implements Log {
 
   @Override
   public void trace(String msg, Object... args) {
-    if (!logger.isTraceEnabled()) {
-      return;
+    if (logger.isTraceEnabled()) {
+      withComputedText(msg, args, logger::trace);
     }
-    withComputedText(msg, args, logger::trace);
   }
 
   @Override
@@ -193,5 +172,18 @@ public class JGroupsLoggerAdapter implements Log {
     if (isDebugEnabled()) return "debug";
     if (isInfoEnabled()) return "info";
     return "warn";
+  }
+
+  private void withComputedText(String msg, Object[] args, Consumer<String> consumer) {
+    try {
+      String text;
+      if (args == null || args.length == 0) {
+        text = msg;
+      } else {
+        text = String.format(msg, args);
+      }
+      consumer.accept(text);
+    } catch (Throwable ignored) {
+    }
   }
 }

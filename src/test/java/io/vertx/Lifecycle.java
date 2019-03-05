@@ -18,8 +18,8 @@ package io.vertx;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxInternal;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.impl.logging.Logger;
+import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.infinispan.health.Health;
 import org.infinispan.health.HealthStatus;

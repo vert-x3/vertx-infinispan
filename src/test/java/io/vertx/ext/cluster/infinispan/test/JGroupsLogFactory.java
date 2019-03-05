@@ -16,7 +16,7 @@
 
 package io.vertx.ext.cluster.infinispan.test;
 
-import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.impl.logging.LoggerFactory;
 import org.jgroups.logging.CustomLogFactory;
 import org.jgroups.logging.Log;
 
