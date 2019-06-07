@@ -19,6 +19,7 @@ package io.vertx.ext.cluster.infinispan.impl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.core.impl.ContextInternal;
@@ -88,7 +89,7 @@ public class InfinispanAsyncMultiMap<K, V> implements AsyncMultiMap<K, V> {
     taskQueue = new TaskQueue();
   }
 
-  private <T> void cfGet(CompletableFuture<T> cf, Future<T> future) {
+  private <T> void cfGet(CompletableFuture<T> cf, Promise<T> future) {
     try {
       future.complete(cf.get());
     } catch (ExecutionException e) {
