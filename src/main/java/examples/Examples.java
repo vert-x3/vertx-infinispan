@@ -16,8 +16,8 @@
 
 package examples;
 
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.shareddata.AsyncMap;
@@ -75,7 +75,7 @@ public class Examples {
   }
 
   public void healthCheck(Vertx vertx) {
-    Handler<Future<Status>> procedure = ClusterHealthCheck.createProcedure(vertx, true);
+    Handler<Promise<Status>> procedure = ClusterHealthCheck.createProcedure(vertx, true);
     HealthChecks checks = HealthChecks.create(vertx).register("cluster-health", procedure);
   }
 
