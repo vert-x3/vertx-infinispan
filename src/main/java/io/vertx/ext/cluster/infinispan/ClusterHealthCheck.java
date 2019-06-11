@@ -17,8 +17,8 @@
 package io.vertx.ext.cluster.infinispan;
 
 import io.vertx.codegen.annotations.VertxGen;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.JsonObject;
@@ -40,7 +40,7 @@ public interface ClusterHealthCheck {
   /**
    * Like {@link #createProcedure(Vertx, boolean)} with {@code details} set to {@code true}.
    */
-  static Handler<Future<Status>> createProcedure(Vertx vertx) {
+  static Handler<Promise<Status>> createProcedure(Vertx vertx) {
     return createProcedure(vertx, true);
   }
 
@@ -51,7 +51,7 @@ public interface ClusterHealthCheck {
    * @param detailed when set to {@code true}, {@link Status#data} will be set with cluster health details
    * @return a Vert.x cluster {@link io.vertx.ext.healthchecks.HealthChecks} procedure
    */
-  static Handler<Future<Status>> createProcedure(Vertx vertx, boolean detailed) {
+  static Handler<Promise<Status>> createProcedure(Vertx vertx, boolean detailed) {
     Objects.requireNonNull(vertx);
     return future -> {
       VertxInternal vertxInternal = (VertxInternal) vertx;
