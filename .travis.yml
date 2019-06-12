@@ -12,9 +12,9 @@ before_cache:
 jobs:
   include:
   - stage: test
-    name: "Unit tests - OracleJDK 8"
+    name: "Unit tests - OpenJDK 8"
     script: mvn -B -DtestLogLevel=OFF test
-    jdk: oraclejdk8
+    jdk: openjdk8
   - stage: deploy
     name: "Deploy to Sonatype's snapshots repository"
     if: type != pull_request
