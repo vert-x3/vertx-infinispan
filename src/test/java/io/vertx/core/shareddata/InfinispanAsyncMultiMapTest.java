@@ -51,13 +51,13 @@ public class InfinispanAsyncMultiMapTest extends AsyncMultiMapTest {
   @Override
   protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
     CountDownLatch latch = new CountDownLatch(1);
-    Future<Vertx> future = Future.future();
-    future.setHandler(ar);
+    Promise<Vertx> promise = Promise.promise();
+    promise.future().setHandler(ar);
     super.clusteredVertx(options, asyncResult -> {
       if (asyncResult.succeeded()) {
-        future.complete(asyncResult.result());
+        promise.complete(asyncResult.result());
       } else {
-        future.fail(asyncResult.cause());
+        promise.fail(asyncResult.cause());
       }
       latch.countDown();
     });
