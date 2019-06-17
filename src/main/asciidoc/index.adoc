@@ -116,7 +116,7 @@ Notice that the custom Infinispan instance need to be configured with:
 
 On Kubernetes, JGroups should be configured to use the `KUBE_PING` protocol.
 
-First, add the `org.infinispan:infinispan-cloud:${infinispan.version}` and `org.jgroups.kubernetes:jgroups-kubernetes:${jgroups.kubernetes.version}` dependencies to your project.
+First, add the `org.infinispan:infinispan-cloud:${infinispan.version}` dependency to your project.
 With Maven it looks like:
 
 [source,xml]
@@ -126,12 +126,6 @@ With Maven it looks like:
   <artifactId>infinispan-cloud</artifactId>
   <version>${infinispan.version}</version>
 </dependency>
-<dependency>
-  <groupId>org.jgroups.kubernetes</groupId>
-  <artifactId>jgroups-kubernetes</artifactId>
-  <version>${jgroups.kubernetes.version}</version>
-</dependency>
-<dependency>
 ----
 
 Then, set the `vertx.jgroups.config` system property to `default-configs/default-jgroups-kubernetes.xml`.

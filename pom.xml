@@ -31,7 +31,6 @@
     <stack.version>4.0.0-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
     <infinispan.version>9.4.10.Final</infinispan.version>
-    <jgroups.kubernetes.version>1.0.7.Final</jgroups.kubernetes.version>
   </properties>
 
   <dependencyManagement>
