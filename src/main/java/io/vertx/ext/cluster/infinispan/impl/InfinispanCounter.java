@@ -17,6 +17,7 @@
 package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.Counter;
@@ -38,11 +39,21 @@ public class InfinispanCounter implements Counter {
   }
 
   @Override
+  public Future<Long> get() {
+    return vertx.executeBlocking(future -> {
+      future.complete(strongCounter.getValue());
+    }, false);
+  }
+
+  @Override
   public void get(Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
-    vertx.executeBlocking(future -> {
-      future.complete(strongCounter.getValue());
-    }, false, resultHandler);
+    get().setHandler(resultHandler);
+  }
+
+  @Override
+  public Future<Long> incrementAndGet() {
+    return addAndGet(1L);
   }
 
   @Override
@@ -52,9 +63,19 @@ public class InfinispanCounter implements Counter {
   }
 
   @Override
+  public Future<Long> getAndIncrement() {
+    return getAndAdd(1L);
+  }
+
+  @Override
   public void getAndIncrement(Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
     getAndAdd(1L, resultHandler);
+  }
+
+  @Override
+  public Future<Long> decrementAndGet() {
+    return addAndGet(-1L);
   }
 
   @Override
@@ -64,26 +85,41 @@ public class InfinispanCounter implements Counter {
   }
 
   @Override
+  public Future<Long> addAndGet(long value) {
+    return vertx.executeBlocking(future -> {
+      future.complete(strongCounter.addAndGet(value));
+    }, false);
+  }
+
+  @Override
   public void addAndGet(long value, Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
-    vertx.executeBlocking(future -> {
-      future.complete(strongCounter.addAndGet(value));
-    }, false, resultHandler);
+    addAndGet(value).setHandler(resultHandler);
+  }
+
+  @Override
+  public Future<Long> getAndAdd(long value) {
+    return vertx.executeBlocking(future -> {
+      future.complete(strongCounter.addAndGet(value) - value);
+    }, false);
   }
 
   @Override
   public void getAndAdd(long value, Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
-    vertx.executeBlocking(future -> {
-      future.complete(strongCounter.addAndGet(value) - value);
-    }, false, resultHandler);
+    getAndAdd(value).setHandler(resultHandler);
+  }
+
+  @Override
+  public Future<Boolean> compareAndSet(long expected, long value) {
+    return vertx.executeBlocking(future -> {
+      future.complete(strongCounter.compareAndSet(expected, value));
+    }, false);
   }
 
   @Override
   public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
-    vertx.executeBlocking(future -> {
-      future.complete(strongCounter.compareAndSet(expected, value));
-    }, false, resultHandler);
+    compareAndSet(expected, value).setHandler(resultHandler);
   }
 }
