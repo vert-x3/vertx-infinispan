@@ -21,6 +21,8 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.PromiseInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -67,6 +69,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.*;
@@ -143,12 +146,12 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public <K, V> void getAsyncMap(String name, Handler<AsyncResult<AsyncMap<K, V>>> resultHandler) {
-    vertx.executeBlocking(future -> {
+  public <K, V> Future<AsyncMap<K, V>> getAsyncMap(String name) {
+    return vertx.executeBlocking(future -> {
       EmbeddedCacheManagerAdmin administration = cacheManager.administration();
       Cache<Object, Object> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
       future.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
-    }, false, resultHandler);
+    }, false);
   }
 
   @Override
@@ -157,39 +160,42 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getLockWithTimeout(String name, long timeout, Handler<AsyncResult<Lock>> resultHandler) {
-    vertx.<ClusteredLock>executeBlocking(fut -> {
+  public Future<Lock> getLockWithTimeout(String name, long timeout) {
+    ContextInternal ctx = (ContextInternal) vertx.getOrCreateContext();
+    PromiseInternal<Lock> promise = ctx.promise();
+    ctx.<ClusteredLock>executeBlocking(fut -> {
       if (!lockManager.isDefined(name)) {
         lockManager.defineLock(name);
       }
       fut.complete(lockManager.get(name));
     }, false, ar -> {
       if (ar.failed()) {
-        resultHandler.handle(Future.failedFuture(ar.cause()));
+        promise.fail(ar.cause());
       } else {
         ClusteredLock lock = ar.result();
         Context context = vertx.getOrCreateContext();
         lock.tryLock(timeout, TimeUnit.MILLISECONDS).whenCompleteAsync((locked, throwable) -> {
           if (throwable != null) {
-            resultHandler.handle(Future.failedFuture(throwable));
+            promise.fail(throwable);
           } else if (locked == Boolean.TRUE) {
-            resultHandler.handle(Future.succeededFuture(new InfinispanLock(lock)));
+            promise.complete(new InfinispanLock(lock));
           } else {
-            resultHandler.handle(Future.failedFuture("Timed out waiting to get lock " + name));
+            promise.fail("Timed out waiting to get lock " + name);
           }
         }, command -> context.runOnContext(v -> command.run()));
       }
     });
+    return promise.future();
   }
 
   @Override
-  public void getCounter(String name, Handler<AsyncResult<Counter>> resultHandler) {
-    vertx.executeBlocking(future -> {
+  public Future<Counter> getCounter(String name) {
+    return vertx.executeBlocking(future -> {
       if (!counterManager.isDefined(name)) {
         counterManager.defineCounter(name, CounterConfiguration.builder(CounterType.UNBOUNDED_STRONG).build());
       }
       future.complete(new InfinispanCounter(vertx, counterManager.getStrongCounter(name).sync()));
-    }, false, resultHandler);
+    }, false);
   }
 
   @Override
