@@ -23,6 +23,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.impl.PromiseInternal;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -150,7 +151,7 @@ public class InfinispanClusterManager implements ClusterManager {
     return vertx.executeBlocking(future -> {
       EmbeddedCacheManagerAdmin administration = cacheManager.administration();
       Cache<Object, Object> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
-      future.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
+      future.complete(new InfinispanAsyncMapImpl<>((VertxInternal) vertx, cache));
     }, false);
   }
 
