@@ -43,19 +43,23 @@ public class Lifecycle {
       VertxInternal vertxInternal = (VertxInternal) vertx;
 
       InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager();
-      EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
-      Health health = cacheManager.getHealth();
 
-      SECONDS.sleep(2); // Make sure rebalancing has been triggered
+      if (clusterManager != null) {
+        EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
+        Health health = cacheManager.getHealth();
 
-      long start = System.currentTimeMillis();
-      try {
-        while (health.getClusterHealth().getHealthStatus() != HealthStatus.HEALTHY
-          && System.currentTimeMillis() - start < MILLISECONDS.convert(2, MINUTES)) {
-          MILLISECONDS.sleep(100);
+        SECONDS.sleep(2); // Make sure rebalancing has been triggered
+
+        long start = System.currentTimeMillis();
+        try {
+          while (health.getClusterHealth().getHealthStatus() != HealthStatus.HEALTHY
+            && System.currentTimeMillis() - start < MILLISECONDS.convert(2, MINUTES)) {
+            MILLISECONDS.sleep(100);
+          }
+        } catch (Exception ignore) {
         }
-      } catch (Exception ignore) {
       }
+
       CountDownLatch latch = new CountDownLatch(1);
       vertxInternal.close(ar -> {
         if (ar.failed()) {
