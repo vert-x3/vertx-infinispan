@@ -52,7 +52,7 @@ public class InfinispanClusteredEventBusTest extends ClusteredEventBusTest {
   protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
     CountDownLatch latch = new CountDownLatch(1);
     Promise<Vertx> promise = Promise.promise();
-    promise.future().setHandler(ar);
+    promise.future().onComplete(ar);
     super.clusteredVertx(options, asyncResult -> {
       if (asyncResult.succeeded()) {
         promise.complete(asyncResult.result());

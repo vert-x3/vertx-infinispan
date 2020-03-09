@@ -48,7 +48,7 @@ public class InfinispanCounter implements Counter {
   @Override
   public void get(Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
-    get().setHandler(resultHandler);
+    get().onComplete(resultHandler);
   }
 
   @Override
@@ -94,7 +94,7 @@ public class InfinispanCounter implements Counter {
   @Override
   public void addAndGet(long value, Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
-    addAndGet(value).setHandler(resultHandler);
+    addAndGet(value).onComplete(resultHandler);
   }
 
   @Override
@@ -107,7 +107,7 @@ public class InfinispanCounter implements Counter {
   @Override
   public void getAndAdd(long value, Handler<AsyncResult<Long>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
-    getAndAdd(value).setHandler(resultHandler);
+    getAndAdd(value).onComplete(resultHandler);
   }
 
   @Override
@@ -120,6 +120,6 @@ public class InfinispanCounter implements Counter {
   @Override
   public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> resultHandler) {
     Objects.requireNonNull(resultHandler, "resultHandler");
-    compareAndSet(expected, value).setHandler(resultHandler);
+    compareAndSet(expected, value).onComplete(resultHandler);
   }
 }
