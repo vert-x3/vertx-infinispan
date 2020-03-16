@@ -16,9 +16,7 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
-import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.streams.ReadStream;
@@ -47,92 +45,69 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
 
   private final VertxInternal vertx;
   private final AdvancedCache<Object, Object> cache;
+  private AdvancedCache<Object, Object> ignoreReturnCache;
 
   public InfinispanAsyncMapImpl(VertxInternal vertx, Cache<Object, Object> cache) {
     this.vertx = vertx;
     this.cache = cache.getAdvancedCache();
-  }
-
-  private <T> void whenComplete(CompletableFuture<T> completableFuture, Promise<T> future) {
-    // Context must be created in the calling thread to ensure the proper context is used
-    Context context = vertx.getOrCreateContext();
-    completableFuture.whenComplete((v, t) -> {
-      if (t != null) {
-        context.runOnContext(h -> future.fail(t));
-      } else {
-        context.runOnContext(h -> future.complete(v));
-      }
-    });
+    ignoreReturnCache = this.cache.withFlags(Flag.IGNORE_RETURN_VALUES);
   }
 
   @Override
   public Future<V> get(K k) {
     Object kk = DataConverter.toCachedObject(k);
-    Promise<Object> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.getAsync(kk), vertxPromise);
-    return vertxPromise.future().map(DataConverter::fromCachedObject);
+    return Future.fromCompletionStage(cache.getAsync(kk), vertx.getOrCreateContext())
+      .map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<Void> put(K k, V v) {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
-    Promise<Object> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(kk, vv), vertxPromise);
-    return vertxPromise.future().map((Void) null);
+    return Future.fromCompletionStage(ignoreReturnCache.putAsync(kk, vv), vertx.getOrCreateContext()).mapEmpty();
   }
 
   @Override
   public Future<Void> put(K k, V v, long ttl) {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
-    Promise<Object> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(kk, vv, ttl, TimeUnit.MILLISECONDS), vertxPromise);
-    return vertxPromise.future().mapEmpty();
+    CompletableFuture<Object> completionStage = ignoreReturnCache.putAsync(kk, vv, ttl, TimeUnit.MILLISECONDS);
+    return Future.fromCompletionStage(completionStage, vertx.getOrCreateContext()).mapEmpty();
   }
 
   @Override
   public Future<V> putIfAbsent(K k, V v) {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
-    Promise<Object> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.putIfAbsentAsync(kk, vv), vertxPromise);
-    return vertxPromise.future().map(DataConverter::<V>fromCachedObject);
+    return Future.fromCompletionStage(cache.putIfAbsentAsync(kk, vv), vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<V> putIfAbsent(K k, V v, long ttl) {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
-    Promise<Object> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.putIfAbsentAsync(kk, vv, ttl, TimeUnit.MILLISECONDS), vertxPromise);
-    return vertxPromise.future().map(DataConverter::fromCachedObject);
+    CompletableFuture<Object> completionStage = cache.putIfAbsentAsync(kk, vv, ttl, TimeUnit.MILLISECONDS);
+    return Future.fromCompletionStage(completionStage, vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<V> remove(K k) {
     Object kk = DataConverter.toCachedObject(k);
-    Promise<Object> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.removeAsync(kk), vertxPromise);
-    return vertxPromise.future().map(DataConverter::fromCachedObject);
+    return Future.fromCompletionStage(cache.removeAsync(kk), vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<Boolean> removeIfPresent(K k, V v) {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
-    Promise<Boolean> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.removeAsync(kk, vv), vertxPromise);
-    return vertxPromise.future();
+    return Future.fromCompletionStage(cache.removeAsync(kk, vv), vertx.getOrCreateContext());
   }
 
   @Override
   public Future<V> replace(K k, V v) {
     Object kk = DataConverter.toCachedObject(k);
     Object vv = DataConverter.toCachedObject(v);
-    Promise<Object> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.replaceAsync(kk, vv), vertxPromise);
-    return vertxPromise.future().map(DataConverter::<V>fromCachedObject);
+    return Future.fromCompletionStage(cache.replaceAsync(kk, vv), vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
   }
 
   @Override
@@ -140,16 +115,12 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
     Object kk = DataConverter.toCachedObject(k);
     Object oo = DataConverter.toCachedObject(oldValue);
     Object nn = DataConverter.toCachedObject(newValue);
-    Promise<Boolean> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.replaceAsync(kk, oo, nn), vertxPromise);
-    return vertxPromise.future();
+    return Future.fromCompletionStage(cache.replaceAsync(kk, oo, nn), vertx.getOrCreateContext());
   }
 
   @Override
   public Future<Void> clear() {
-    Promise<Void> vertxPromise = vertx.getOrCreateContext().promise();
-    whenComplete(cache.clearAsync(), vertxPromise);
-    return vertxPromise.future();
+    return Future.fromCompletionStage(cache.clearAsync(), vertx.getOrCreateContext());
   }
 
   @Override
@@ -159,23 +130,23 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
 
   @Override
   public Future<Set<K>> keys() {
-    return vertx.executeBlocking(future -> {
-      Set<Object> cacheKeys = cache.keySet().stream().collect(CacheCollectors.serializableCollector(() -> toSet()));
-      future.complete(cacheKeys.stream().<K>map(DataConverter::fromCachedObject).collect(Collectors.toSet()));
+    return vertx.executeBlocking(promise -> {
+      Set<Object> cacheKeys = cache.keySet().stream().collect(CacheCollectors.serializableCollector(Collectors::toSet));
+      promise.complete(cacheKeys.stream().<K>map(DataConverter::fromCachedObject).collect(toSet()));
     }, false);
   }
 
   @Override
   public Future<List<V>> values() {
-    return vertx.executeBlocking(future -> {
-      List<Object> cacheValues = cache.values().stream().collect(CacheCollectors.serializableCollector(() -> toList()));
-      future.complete(cacheValues.stream().<V>map(DataConverter::fromCachedObject).collect(Collectors.toList()));
+    return vertx.executeBlocking(promise -> {
+      List<Object> cacheValues = cache.values().stream().collect(CacheCollectors.serializableCollector(Collectors::toList));
+      promise.complete(cacheValues.stream().<V>map(DataConverter::fromCachedObject).collect(toList()));
     }, false);
   }
 
   @Override
   public Future<Map<K, V>> entries() {
-    return vertx.executeBlocking(future -> {
+    return vertx.executeBlocking(promise -> {
       Map<Object, Object> cacheEntries = cache.entrySet().stream()
         .collect(CacheCollectors.serializableCollector(() -> toMap(Entry::getKey, Entry::getValue)));
       Map<K, V> result = new HashMap<>();
@@ -184,7 +155,7 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
         V v = DataConverter.fromCachedObject(entry.getValue());
         result.put(k, v);
       }
-      future.complete(result);
+      promise.complete(result);
     }, false);
   }
 

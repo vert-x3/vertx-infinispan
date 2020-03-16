@@ -17,12 +17,10 @@
 package io.vertx.ext.cluster.infinispan;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.ContextInternal;
-import io.vertx.core.impl.PromiseInternal;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
@@ -63,17 +61,10 @@ import org.infinispan.remoting.transport.Address;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.WeakHashMap;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.toList;
 
 /**
  * @author Thomas Segismont
@@ -91,7 +82,7 @@ public class InfinispanClusterManager implements ClusterManager {
   private final String jgroupsConfigPath;
   private final boolean userProvidedCacheManager;
 
-  private Vertx vertx;
+  private VertxInternal vertx;
   private DefaultCacheManager cacheManager;
   private NodeListener nodeListener;
   private EmbeddedMultimapCacheManager<Object, Object> multimapCacheManager;
@@ -127,7 +118,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void setVertx(Vertx vertx) {
-    this.vertx = vertx;
+    this.vertx = (VertxInternal) vertx;
   }
 
   public BasicCacheContainer getCacheContainer() {
@@ -162,31 +153,17 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public Future<Lock> getLockWithTimeout(String name, long timeout) {
-    ContextInternal ctx = (ContextInternal) vertx.getOrCreateContext();
-    PromiseInternal<Lock> promise = ctx.promise();
-    ctx.<ClusteredLock>executeBlocking(fut -> {
+    Future<ClusteredLock> lockFuture = vertx.executeBlocking(promise -> {
       if (!lockManager.isDefined(name)) {
         lockManager.defineLock(name);
       }
-      fut.complete(lockManager.get(name));
-    }, false, ar -> {
-      if (ar.failed()) {
-        promise.fail(ar.cause());
-      } else {
-        ClusteredLock lock = ar.result();
-        Context context = vertx.getOrCreateContext();
-        lock.tryLock(timeout, TimeUnit.MILLISECONDS).whenCompleteAsync((locked, throwable) -> {
-          if (throwable != null) {
-            promise.fail(throwable);
-          } else if (locked == Boolean.TRUE) {
-            promise.complete(new InfinispanLock(lock));
-          } else {
-            promise.fail("Timed out waiting to get lock " + name);
-          }
-        }, command -> context.runOnContext(v -> command.run()));
-      }
+      promise.complete(lockManager.get(name));
+    }, false);
+    return lockFuture.compose(lock -> {
+      ContextInternal context = vertx.getOrCreateContext();
+      return Future.fromCompletionStage(lock.tryLock(timeout, TimeUnit.MILLISECONDS), context)
+        .compose(locked -> locked ? Future.succeededFuture(new InfinispanLock(lock)) : context.failedFuture("Timed out waiting to get lock " + name));
     });
-    return promise.future();
   }
 
   @Override
