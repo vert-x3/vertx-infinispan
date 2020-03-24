@@ -106,8 +106,9 @@ Notice that the custom Infinispan instance need to be configured with:
 ----
 <cache-container default-cache="distributed-cache">
   <distributed-cache name="distributed-cache"/>
-  <distributed-cache name="__vertx.subs"/>
+  <replicated-cache name="__vertx.subs"/>
   <replicated-cache name="__vertx.haInfo"/>
+  <replicated-cache name="__vertx.nodeInfo"/>
   <distributed-cache-configuration name="__vertx.distributed.cache.configuration"/>
 </cache-container>
 ----
@@ -247,25 +248,22 @@ vertx run myverticle.js -cluster -cluster-host your-ip-address
 
 Where `your-ip-address` is the same IP address you specified in the JGroups configuration.
 
-If using Vert.x programmatically you can specify this using
-{@link io.vertx.core.VertxOptions#setClusterHost(java.lang.String)}.
+If using Vert.x programmatically you can specify this using {@link io.vertx.core.eventbus.EventBusOptions#setHost(java.lang.String)}.
 
 === Using a VPN
 
-This is a variation of the above case. VPN software often works by creating a virtual network interface which often
-doesn't support multicast. If you have a VPN running and you do not specify the correct interface to use in both the
-JGroups configuration and to Vert.x then the VPN interface may be chosen instead of the correct interface.
+This is a variation of the above case.
+VPN software often works by creating a virtual network interface which often doesn't support multicast.
+If you have a VPN running and you do not specify the correct interface to use in both the JGroups configuration and to Vert.x then the VPN interface may be chosen instead of the correct interface.
 
-So, if you have a VPN running you may have to configure both JGroups and Vert.x to use the correct interface as
-described in the previous section.
+So, if you have a VPN running you may have to configure both JGroups and Vert.x to use the correct interface as described in the previous section.
 
 === When multicast is not available
 
-In some cases you may not be able to use multicast discovery as it might not be available in your environment. In that case
-you should configure another protocol, e.g. `TCPPING` to use TCP sockets, or `S3_PING` when running on Amazon EC2.
+In some cases you may not be able to use multicast discovery as it might not be available in your environment.
+In that case you should configure another protocol, e.g. `TCPPING` to use TCP sockets, or `S3_PING` when running on Amazon EC2.
 
-For more information on available JGroups discovery protocols and how to configure them
-please consult the http://www.jgroups.org/manual/index.html#Discovery[JGroups documentation].
+For more information on available JGroups discovery protocols and how to configure them please consult the http://www.jgroups.org/manual/index.html#Discovery[JGroups documentation].
 
 === Problems with IPv6
 

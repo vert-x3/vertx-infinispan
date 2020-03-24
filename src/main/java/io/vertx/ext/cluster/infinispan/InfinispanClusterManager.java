@@ -16,10 +16,7 @@
 
 package io.vertx.ext.cluster.infinispan;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
@@ -27,19 +24,16 @@ import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.shareddata.Counter;
 import io.vertx.core.shareddata.Lock;
-import io.vertx.core.spi.cluster.AsyncMultiMap;
-import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.core.spi.cluster.NodeListener;
-import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMapImpl;
-import io.vertx.ext.cluster.infinispan.impl.InfinispanAsyncMultiMap;
-import io.vertx.ext.cluster.infinispan.impl.InfinispanCounter;
-import io.vertx.ext.cluster.infinispan.impl.InfinispanLock;
+import io.vertx.core.spi.cluster.*;
+import io.vertx.ext.cluster.infinispan.impl.*;
+import org.infinispan.AdvancedCache;
 import org.infinispan.Cache;
 import org.infinispan.commons.api.BasicCacheContainer;
 import org.infinispan.commons.util.FileLookup;
 import org.infinispan.commons.util.FileLookupFactory;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
+import org.infinispan.context.Flag;
 import org.infinispan.counter.EmbeddedCounterManagerFactory;
 import org.infinispan.counter.api.CounterConfiguration;
 import org.infinispan.counter.api.CounterManager;
@@ -58,10 +52,15 @@ import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
+import org.infinispan.util.function.SerializablePredicate;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.toList;
@@ -85,13 +84,14 @@ public class InfinispanClusterManager implements ClusterManager {
   private VertxInternal vertx;
   private DefaultCacheManager cacheManager;
   private NodeListener nodeListener;
-  private EmbeddedMultimapCacheManager<Object, Object> multimapCacheManager;
+  private EmbeddedMultimapCacheManager<String, InfinispanRegistrationInfo> multimapCacheManager;
   private EmbeddedClusteredLockManager lockManager;
   private CounterManager counterManager;
+  private NodeInfo nodeInfo;
+  private AdvancedCache<String, InfinispanNodeInfo> nodeInfoCache;
+  private EmbeddedMultimapCache<String, InfinispanRegistrationInfo> subsCache;
   private volatile boolean active;
   private ClusterViewListener viewListener;
-  // Guarded by this
-  private Set<InfinispanAsyncMultiMap> multimaps = Collections.newSetFromMap(new WeakHashMap<>(1));
 
   /**
    * Creates a new cluster manager configured with {@code infinispan.xml} and {@code jgroups.xml} files.
@@ -117,8 +117,8 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void setVertx(Vertx vertx) {
-    this.vertx = (VertxInternal) vertx;
+  public void setVertx(VertxInternal vertx) {
+    this.vertx = vertx;
   }
 
   public BasicCacheContainer getCacheContainer() {
@@ -126,23 +126,11 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public <K, V> void getAsyncMultiMap(String name, Handler<AsyncResult<AsyncMultiMap<K, V>>> resultHandler) {
-    vertx.executeBlocking(future -> {
-      EmbeddedMultimapCache<Object, Object> multimapCache = (EmbeddedMultimapCache<Object, Object>) multimapCacheManager.get(name);
-      InfinispanAsyncMultiMap<K, V> asyncMultiMap = new InfinispanAsyncMultiMap<>(vertx, multimapCache);
-      synchronized (this) {
-        multimaps.add(asyncMultiMap);
-      }
-      future.complete(asyncMultiMap);
-    }, false, resultHandler);
-  }
-
-  @Override
   public <K, V> Future<AsyncMap<K, V>> getAsyncMap(String name) {
     return vertx.executeBlocking(future -> {
       EmbeddedCacheManagerAdmin administration = cacheManager.administration();
       Cache<Object, Object> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
-      future.complete(new InfinispanAsyncMapImpl<>((VertxInternal) vertx, cache));
+      future.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
     }, false);
   }
 
@@ -177,7 +165,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public String getNodeID() {
+  public String getNodeId() {
     return cacheManager.getNodeAddress();
   }
 
@@ -192,8 +180,29 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void join(Handler<AsyncResult<Void>> resultHandler) {
-    vertx.executeBlocking(future -> {
+  public Future<Void> setNodeInfo(NodeInfo nodeInfo) {
+    synchronized (this) {
+      this.nodeInfo = nodeInfo;
+    }
+    InfinispanNodeInfo value = new InfinispanNodeInfo(nodeInfo);
+    CompletableFuture<InfinispanNodeInfo> completionStage = nodeInfoCache.withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(getNodeId(), value);
+    return Future.fromCompletionStage(completionStage, vertx.getOrCreateContext()).mapEmpty();
+  }
+
+  @Override
+  public synchronized NodeInfo getNodeInfo() {
+    return nodeInfo;
+  }
+
+  @Override
+  public Future<NodeInfo> getNodeInfo(String nodeId) {
+    return Future.fromCompletionStage(nodeInfoCache.getAsync(nodeId), vertx.getOrCreateContext())
+      .map(value -> value != null ? value.unwrap() : null);
+  }
+
+  @Override
+  public Future<Void> join() {
+    return vertx.executeBlocking(future -> {
       if (active) {
         future.complete();
         return;
@@ -234,14 +243,20 @@ public class InfinispanClusterManager implements ClusterManager {
       viewListener = new ClusterViewListener();
       cacheManager.addListener(viewListener);
       try {
-        multimapCacheManager = (EmbeddedMultimapCacheManager<Object, Object>) EmbeddedMultimapCacheManagerFactory.from(cacheManager);
+
+        multimapCacheManager = (EmbeddedMultimapCacheManager<String, InfinispanRegistrationInfo>) EmbeddedMultimapCacheManagerFactory.from(cacheManager);
+        subsCache = (EmbeddedMultimapCache<String, InfinispanRegistrationInfo>) multimapCacheManager.get("__vertx.subs");
+
+        nodeInfoCache = cacheManager.<String, InfinispanNodeInfo>getCache("__vertx.nodeInfo").getAdvancedCache();
+
         lockManager = (EmbeddedClusteredLockManager) EmbeddedClusteredLockManagerFactory.from(cacheManager);
         counterManager = EmbeddedCounterManagerFactory.asCounterManager(cacheManager);
+
         future.complete();
       } catch (Exception e) {
         future.fail(e);
       }
-    }, false, resultHandler);
+    }, false);
   }
 
   private ClassLoader getCTCCL() {
@@ -258,8 +273,8 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void leave(Handler<AsyncResult<Void>> resultHandler) {
-    vertx.executeBlocking(future -> {
+  public Future<Void> leave() {
+    return vertx.executeBlocking(future -> {
       if (!active) {
         future.complete();
         return;
@@ -270,12 +285,32 @@ public class InfinispanClusterManager implements ClusterManager {
         cacheManager.stop();
       }
       future.complete();
-    }, false, resultHandler);
+    }, false);
   }
 
   @Override
   public boolean isActive() {
     return active;
+  }
+
+  @Override
+  public Future<Void> register(String address, RegistrationInfo registrationInfo) {
+    InfinispanRegistrationInfo value = new InfinispanRegistrationInfo(registrationInfo);
+    return Future.fromCompletionStage(subsCache.put(address, value), vertx.getOrCreateContext());
+  }
+
+  @Override
+  public Future<Void> unregister(String address, RegistrationInfo registrationInfo) {
+    InfinispanRegistrationInfo value = new InfinispanRegistrationInfo(registrationInfo);
+    return Future.fromCompletionStage(subsCache.remove(address, value), vertx.getOrCreateContext()).mapEmpty();
+
+  }
+
+  @Override
+  public Future<RegistrationListener> registrationListener(String address) {
+    return Future.fromCompletionStage(subsCache.get(address), vertx.getOrCreateContext())
+      .map(infos -> infos.stream().map(InfinispanRegistrationInfo::unwrap).collect(toList()))
+      .map(infos -> new InfinispanRegistrationListener(vertx, subsCache, address, infos));
   }
 
   @Listener(sync = false)
@@ -296,19 +331,26 @@ public class InfinispanClusterManager implements ClusterManager {
           return;
         }
 
-        multimaps.forEach(InfinispanAsyncMultiMap::clearCache);
-
         List<Address> added = new ArrayList<>(e.getNewMembers());
         added.removeAll(e.getOldMembers());
-        log.debug("Members added = " + added);
+        if (log.isDebugEnabled()) {
+          log.debug("Members added = " + added);
+        }
         added.forEach(address -> {
           if (nodeListener != null) {
             nodeListener.nodeAdded(address.toString());
           }
         });
+
         List<Address> removed = new ArrayList<>(e.getOldMembers());
         removed.removeAll(e.getNewMembers());
-        log.debug("Members removed = " + removed);
+        if (log.isDebugEnabled()) {
+          log.debug("Members removed = " + removed);
+        }
+        if (isMaster()) {
+          cleanSubs(removed);
+          cleanNodeInfos(removed);
+        }
         removed.forEach(address -> {
           if (nodeListener != null) {
             nodeListener.nodeLeft(address.toString());
@@ -316,5 +358,19 @@ public class InfinispanClusterManager implements ClusterManager {
         });
       }
     }
+  }
+
+  private boolean isMaster() {
+    return cacheManager.isCoordinator();
+  }
+
+  private void cleanSubs(List<Address> removed) {
+    removed.stream().map(Address::toString).forEach(nid -> {
+      subsCache.remove((SerializablePredicate<InfinispanRegistrationInfo>) info -> nid.equals(info.unwrap().getNodeId()));
+    });
+  }
+
+  private void cleanNodeInfos(List<Address> removed) {
+    removed.stream().map(Address::toString).forEach(nodeInfoCache::remove);
   }
 }

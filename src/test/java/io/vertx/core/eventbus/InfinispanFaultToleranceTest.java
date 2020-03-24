@@ -76,4 +76,11 @@ public class InfinispanFaultToleranceTest extends FaultToleranceTest {
       "-Djgroups.logging.log_factory_class=io.vertx.ext.cluster.infinispan.test.JGroupsLogFactory"
     );
   }
+
+  @Override
+  protected void afterNodesKilled() throws Exception {
+    super.afterNodesKilled();
+    // Additionnal wait to make sure all nodes noticed the shutdowns
+    Thread.sleep(30_000);
+  }
 }

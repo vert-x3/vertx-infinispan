@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Red Hat, Inc.
+ * Copyright 2020 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -14,13 +14,11 @@
  * under the License.
  */
 
-package io.vertx.core.shareddata;
+package io.vertx.core.eventbus;
 
 import io.vertx.Lifecycle;
 import io.vertx.LoggingTestWatcher;
 import io.vertx.core.*;
-import io.vertx.core.impl.logging.Logger;
-import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.junit.Rule;
@@ -34,9 +32,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanAsyncMultiMapTest extends AsyncMultiMapTest {
-
-  private static final Logger log = LoggerFactory.getLogger(InfinispanAsyncMultiMapTest.class);
+public class InfinispanRegistrationListenerTest extends RegistrationListenerTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

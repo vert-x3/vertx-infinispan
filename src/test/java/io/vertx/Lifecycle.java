@@ -20,6 +20,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
+import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.spi.cluster.ClusterManagerDelegate;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.infinispan.health.Health;
 import org.infinispan.health.HealthStatus;
@@ -42,7 +44,7 @@ public class Lifecycle {
     for (Vertx vertx : clustered) {
       VertxInternal vertxInternal = (VertxInternal) vertx;
 
-      InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager();
+      InfinispanClusterManager clusterManager = getInfinispanClusterManager(vertxInternal.getClusterManager());
 
       if (clusterManager != null) {
         EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
@@ -69,6 +71,19 @@ public class Lifecycle {
       });
       latch.await(2, TimeUnit.MINUTES);
     }
+  }
+
+  private static InfinispanClusterManager getInfinispanClusterManager(ClusterManager cm) {
+    if (cm == null) {
+      return null;
+    }
+    if (cm instanceof ClusterManagerDelegate) {
+      return getInfinispanClusterManager(((ClusterManagerDelegate) cm).unwrap());
+    }
+    if (cm instanceof InfinispanClusterManager) {
+      return (InfinispanClusterManager) cm;
+    }
+    throw new ClassCastException("Unexpected cluster manager implementation: " + cm.getClass());
   }
 
   private Lifecycle() {
