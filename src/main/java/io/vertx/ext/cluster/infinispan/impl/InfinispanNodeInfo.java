@@ -18,7 +18,6 @@ package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.spi.cluster.NodeAddress;
 import io.vertx.core.spi.cluster.NodeInfo;
 import org.infinispan.commons.marshall.Externalizer;
 import org.infinispan.commons.marshall.SerializeWith;
@@ -47,9 +46,9 @@ public class InfinispanNodeInfo {
   public static class InfinispanNodeInfoExternalizer implements Externalizer<InfinispanNodeInfo> {
     @Override
     public void writeObject(ObjectOutput output, InfinispanNodeInfo object) throws IOException {
-      output.writeUTF(object.nodeInfo.getAddress().getHost());
-      output.writeInt(object.nodeInfo.getAddress().getPort());
-      JsonObject metadata = object.nodeInfo.getMetadata();
+      output.writeUTF(object.nodeInfo.host());
+      output.writeInt(object.nodeInfo.port());
+      JsonObject metadata = object.nodeInfo.metadata();
       if (metadata != null) {
         byte[] bytes = metadata.toBuffer().getBytes();
         output.writeInt(bytes.length);
@@ -61,7 +60,8 @@ public class InfinispanNodeInfo {
 
     @Override
     public InfinispanNodeInfo readObject(ObjectInput input) throws IOException, ClassNotFoundException {
-      NodeAddress address = new NodeAddress(input.readUTF(), input.readInt());
+      String host = input.readUTF();
+      int port = input.readInt();
       int metadataBytesSize = input.readInt();
       JsonObject metadata;
       if (metadataBytesSize < 0) {
@@ -71,7 +71,7 @@ public class InfinispanNodeInfo {
         input.readFully(bytes);
         metadata = new JsonObject(Buffer.buffer(bytes));
       }
-      return new InfinispanNodeInfo(new NodeInfo(address, metadata));
+      return new InfinispanNodeInfo(new NodeInfo(host, port, metadata));
     }
   }
 }

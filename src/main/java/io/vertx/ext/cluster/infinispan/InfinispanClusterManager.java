@@ -17,7 +17,8 @@
 package io.vertx.ext.cluster.infinispan;
 
 import io.vertx.core.Future;
-import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
@@ -43,16 +44,12 @@ import org.infinispan.lock.api.ClusteredLock;
 import org.infinispan.lock.impl.manager.EmbeddedClusteredLockManager;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManagerAdmin;
-import org.infinispan.multimap.api.embedded.EmbeddedMultimapCacheManagerFactory;
-import org.infinispan.multimap.impl.EmbeddedMultimapCache;
-import org.infinispan.multimap.impl.EmbeddedMultimapCacheManager;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachemanagerlistener.annotation.Merged;
 import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
-import org.infinispan.util.function.SerializablePredicate;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -60,7 +57,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.toList;
@@ -69,6 +65,7 @@ import static java.util.stream.Collectors.toList;
  * @author Thomas Segismont
  */
 public class InfinispanClusterManager implements ClusterManager {
+
   private static final Logger log = LoggerFactory.getLogger(InfinispanClusterManager.class);
 
   private static final String VERTX_INFINISPAN_CONFIG_PROP_NAME = "vertx.infinispan.config";
@@ -82,14 +79,14 @@ public class InfinispanClusterManager implements ClusterManager {
   private final boolean userProvidedCacheManager;
 
   private VertxInternal vertx;
+  private NodeSelector nodeSelector;
   private DefaultCacheManager cacheManager;
   private NodeListener nodeListener;
-  private EmbeddedMultimapCacheManager<String, InfinispanRegistrationInfo> multimapCacheManager;
   private EmbeddedClusteredLockManager lockManager;
   private CounterManager counterManager;
   private NodeInfo nodeInfo;
   private AdvancedCache<String, InfinispanNodeInfo> nodeInfoCache;
-  private EmbeddedMultimapCache<String, InfinispanRegistrationInfo> subsCache;
+  private SubsCacheHelper subsCacheHelper;
   private volatile boolean active;
   private ClusterViewListener viewListener;
 
@@ -117,8 +114,9 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void setVertx(VertxInternal vertx) {
-    this.vertx = vertx;
+  public void init(Vertx vertx, NodeSelector nodeSelector) {
+    this.vertx = (VertxInternal) vertx;
+    this.nodeSelector = nodeSelector;
   }
 
   public BasicCacheContainer getCacheContainer() {
@@ -126,12 +124,12 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public <K, V> Future<AsyncMap<K, V>> getAsyncMap(String name) {
-    return vertx.executeBlocking(future -> {
+  public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
+    vertx.executeBlocking(prom -> {
       EmbeddedCacheManagerAdmin administration = cacheManager.administration();
       Cache<Object, Object> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
-      future.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
-    }, false);
+      prom.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
+    }, false, promise);
   }
 
   @Override
@@ -140,28 +138,43 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public Future<Lock> getLockWithTimeout(String name, long timeout) {
-    Future<ClusteredLock> lockFuture = vertx.executeBlocking(promise -> {
+  public void getLockWithTimeout(String name, long timeout, Promise<Lock> promise) {
+    vertx.<ClusteredLock>executeBlocking(prom -> {
       if (!lockManager.isDefined(name)) {
         lockManager.defineLock(name);
       }
-      promise.complete(lockManager.get(name));
-    }, false);
-    return lockFuture.compose(lock -> {
-      ContextInternal context = vertx.getOrCreateContext();
-      return Future.fromCompletionStage(lock.tryLock(timeout, TimeUnit.MILLISECONDS), context)
-        .compose(locked -> locked ? Future.succeededFuture(new InfinispanLock(lock)) : context.failedFuture("Timed out waiting to get lock " + name));
+      prom.complete(lockManager.get(name));
+    }, false, ar -> {
+      if (ar.succeeded()) {
+        tryLock(ar.result(), name, timeout, promise);
+      } else {
+        promise.fail(ar.cause());
+      }
+    });
+  }
+
+  private void tryLock(ClusteredLock lock, String name, long timeout, Promise<Lock> promise) {
+    lock.tryLock(timeout, TimeUnit.MILLISECONDS).whenComplete((locked, throwable) -> {
+      if (throwable == null) {
+        if (locked) {
+          promise.complete(new InfinispanLock(lock));
+        } else {
+          promise.fail("Timed out waiting to get lock " + name);
+        }
+      } else {
+        promise.fail(throwable);
+      }
     });
   }
 
   @Override
-  public Future<Counter> getCounter(String name) {
-    return vertx.executeBlocking(future -> {
+  public void getCounter(String name, Promise<Counter> promise) {
+    vertx.executeBlocking(prom -> {
       if (!counterManager.isDefined(name)) {
         counterManager.defineCounter(name, CounterConfiguration.builder(CounterType.UNBOUNDED_STRONG).build());
       }
-      future.complete(new InfinispanCounter(vertx, counterManager.getStrongCounter(name).sync()));
-    }, false);
+      prom.complete(new InfinispanCounter(vertx, counterManager.getStrongCounter(name).sync()));
+    }, false, promise);
   }
 
   @Override
@@ -180,13 +193,14 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public Future<Void> setNodeInfo(NodeInfo nodeInfo) {
+  public void setNodeInfo(NodeInfo nodeInfo, Promise<Void> promise) {
     synchronized (this) {
       this.nodeInfo = nodeInfo;
     }
     InfinispanNodeInfo value = new InfinispanNodeInfo(nodeInfo);
-    CompletableFuture<InfinispanNodeInfo> completionStage = nodeInfoCache.withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(getNodeId(), value);
-    return Future.fromCompletionStage(completionStage, vertx.getOrCreateContext()).mapEmpty();
+    Future.fromCompletionStage(nodeInfoCache.withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(getNodeId(), value))
+      .<Void>mapEmpty()
+      .onComplete(promise);
   }
 
   @Override
@@ -195,16 +209,17 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public Future<NodeInfo> getNodeInfo(String nodeId) {
-    return Future.fromCompletionStage(nodeInfoCache.getAsync(nodeId), vertx.getOrCreateContext())
-      .map(value -> value != null ? value.unwrap() : null);
+  public void getNodeInfo(String nodeId, Promise<NodeInfo> promise) {
+    Future.fromCompletionStage(nodeInfoCache.getAsync(nodeId))
+      .map(value -> value != null ? value.unwrap() : null)
+      .onComplete(promise);
   }
 
   @Override
-  public Future<Void> join() {
-    return vertx.executeBlocking(future -> {
+  public void join(Promise<Void> promise) {
+    vertx.executeBlocking(prom -> {
       if (active) {
-        future.complete();
+        prom.complete();
         return;
       }
       active = true;
@@ -234,7 +249,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
           cacheManager = new DefaultCacheManager(builderHolder, true);
         } catch (IOException e) {
-          future.fail(e);
+          prom.fail(e);
           return;
         } finally {
           safeClose(ispnConfigStream);
@@ -244,19 +259,18 @@ public class InfinispanClusterManager implements ClusterManager {
       cacheManager.addListener(viewListener);
       try {
 
-        multimapCacheManager = (EmbeddedMultimapCacheManager<String, InfinispanRegistrationInfo>) EmbeddedMultimapCacheManagerFactory.from(cacheManager);
-        subsCache = (EmbeddedMultimapCache<String, InfinispanRegistrationInfo>) multimapCacheManager.get("__vertx.subs");
+        subsCacheHelper = new SubsCacheHelper(cacheManager, nodeSelector);
 
         nodeInfoCache = cacheManager.<String, InfinispanNodeInfo>getCache("__vertx.nodeInfo").getAdvancedCache();
 
         lockManager = (EmbeddedClusteredLockManager) EmbeddedClusteredLockManagerFactory.from(cacheManager);
         counterManager = EmbeddedCounterManagerFactory.asCounterManager(cacheManager);
 
-        future.complete();
+        prom.complete();
       } catch (Exception e) {
-        future.fail(e);
+        prom.fail(e);
       }
-    }, false);
+    }, false, promise);
   }
 
   private ClassLoader getCTCCL() {
@@ -273,19 +287,20 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public Future<Void> leave() {
-    return vertx.executeBlocking(future -> {
+  public void leave(Promise<Void> promise) {
+    vertx.executeBlocking(prom -> {
       if (!active) {
-        future.complete();
+        prom.complete();
         return;
       }
       active = false;
+      subsCacheHelper.close();
       cacheManager.removeListener(viewListener);
       if (!userProvidedCacheManager) {
         cacheManager.stop();
       }
-      future.complete();
-    }, false);
+      prom.complete();
+    }, false, promise);
   }
 
   @Override
@@ -294,23 +309,18 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public Future<Void> register(String address, RegistrationInfo registrationInfo) {
-    InfinispanRegistrationInfo value = new InfinispanRegistrationInfo(registrationInfo);
-    return Future.fromCompletionStage(subsCache.put(address, value), vertx.getOrCreateContext());
+  public void addRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+    subsCacheHelper.put(address, registrationInfo, promise);
   }
 
   @Override
-  public Future<Void> unregister(String address, RegistrationInfo registrationInfo) {
-    InfinispanRegistrationInfo value = new InfinispanRegistrationInfo(registrationInfo);
-    return Future.fromCompletionStage(subsCache.remove(address, value), vertx.getOrCreateContext()).mapEmpty();
-
+  public void removeRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+    subsCacheHelper.remove(address, registrationInfo, promise);
   }
 
   @Override
-  public Future<RegistrationListener> registrationListener(String address) {
-    return Future.fromCompletionStage(subsCache.get(address), vertx.getOrCreateContext())
-      .map(infos -> infos.stream().map(InfinispanRegistrationInfo::unwrap).collect(toList()))
-      .map(infos -> new InfinispanRegistrationListener(vertx, subsCache, address, infos));
+  public void getRegistrations(String address, Promise<List<RegistrationInfo>> promise) {
+    subsCacheHelper.get(address, promise);
   }
 
   @Listener(sync = false)
@@ -365,9 +375,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   private void cleanSubs(List<Address> removed) {
-    removed.stream().map(Address::toString).forEach(nid -> {
-      subsCache.remove((SerializablePredicate<InfinispanRegistrationInfo>) info -> nid.equals(info.unwrap().getNodeId()));
-    });
+    removed.stream().map(Address::toString).forEach(subsCacheHelper::removeAllForNode);
   }
 
   private void cleanNodeInfos(List<Address> removed) {

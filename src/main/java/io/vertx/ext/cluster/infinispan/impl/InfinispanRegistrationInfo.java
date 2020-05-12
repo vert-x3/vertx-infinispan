@@ -59,9 +59,9 @@ public class InfinispanRegistrationInfo {
   public static class InfinispanRegistrationInfoExternalizer implements Externalizer<InfinispanRegistrationInfo> {
     @Override
     public void writeObject(ObjectOutput output, InfinispanRegistrationInfo object) throws IOException {
-      output.writeUTF(object.registrationInfo.getNodeId());
-      output.writeLong(object.registrationInfo.getSeq());
-      output.writeBoolean(object.registrationInfo.isLocalOnly());
+      output.writeUTF(object.registrationInfo.nodeId());
+      output.writeLong(object.registrationInfo.seq());
+      output.writeBoolean(object.registrationInfo.localOnly());
     }
 
     @Override
