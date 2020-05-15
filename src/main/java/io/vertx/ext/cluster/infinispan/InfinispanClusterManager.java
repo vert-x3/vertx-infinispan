@@ -310,17 +310,19 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void addRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    subsCacheHelper.put(address, registrationInfo, promise);
+    SubsOpSerializer serializer = SubsOpSerializer.get(vertx.getOrCreateContext());
+    serializer.execute(subsCacheHelper::put, address, registrationInfo, promise);
   }
 
   @Override
   public void removeRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    subsCacheHelper.remove(address, registrationInfo, promise);
+    SubsOpSerializer serializer = SubsOpSerializer.get(vertx.getOrCreateContext());
+    serializer.execute(subsCacheHelper::remove, address, registrationInfo, promise);
   }
 
   @Override
   public void getRegistrations(String address, Promise<List<RegistrationInfo>> promise) {
-    subsCacheHelper.get(address, promise);
+    Future.fromCompletionStage(subsCacheHelper.get(address)).onComplete(promise);
   }
 
   @Listener(sync = false)

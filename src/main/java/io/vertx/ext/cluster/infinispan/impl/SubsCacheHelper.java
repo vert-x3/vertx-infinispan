@@ -16,8 +16,6 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeSelector;
@@ -49,6 +47,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -82,20 +81,18 @@ public class SubsCacheHelper {
       .addFilteredListener(entryListener, new EventFilter(), new EventConverter(), filterAnnotations);
   }
 
-  public void get(String address, Promise<List<RegistrationInfo>> promise) {
-    Future.fromCompletionStage(subsCache.get(address))
-      .map(collection -> collection.stream().map(InfinispanRegistrationInfo::unwrap).collect(toList()))
-      .onComplete(promise);
+  public CompletableFuture<List<RegistrationInfo>> get(String address) {
+    return subsCache.get(address)
+      .thenApply(collection -> collection.stream().map(InfinispanRegistrationInfo::unwrap).collect(toList()));
   }
 
-  public void put(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    InfinispanRegistrationInfo value = new InfinispanRegistrationInfo(registrationInfo);
-    Future.fromCompletionStage(subsCache.put(address, value)).onComplete(promise);
+  public CompletableFuture<Void> put(String address, RegistrationInfo registrationInfo) {
+    return subsCache.put(address, new InfinispanRegistrationInfo(registrationInfo));
   }
 
-  public void remove(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
-    InfinispanRegistrationInfo value = new InfinispanRegistrationInfo(registrationInfo);
-    Future.fromCompletionStage(subsCache.remove(address, value)).<Void>mapEmpty().onComplete(promise);
+  public CompletableFuture<Void> remove(String address, RegistrationInfo registrationInfo) {
+    return subsCache.remove(address, new InfinispanRegistrationInfo(registrationInfo))
+      .thenApply(v -> null);
   }
 
   public void removeAllForNode(String nodeId) {
@@ -107,13 +104,11 @@ public class SubsCacheHelper {
   }
 
   private void fireRegistrationUpdateEvent(String address) {
-    Promise<List<RegistrationInfo>> promise = Promise.promise();
-    get(address, promise);
-    promise.future().onComplete(ar -> {
-      if (ar.succeeded()) {
-        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, ar.result()));
+    get(address).whenComplete((registrationInfos, throwable) -> {
+      if (throwable == null) {
+        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
       } else {
-        log.trace("A failure occured while retrieving the updated registrations", ar.cause());
+        log.trace("A failure occured while retrieving the updated registrations", throwable);
         nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, Collections.emptyList()));
       }
     });
