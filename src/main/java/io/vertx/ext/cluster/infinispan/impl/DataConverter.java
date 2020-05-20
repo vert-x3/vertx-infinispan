@@ -16,7 +16,6 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
-import io.vertx.core.eventbus.impl.clustered.ClusterNodeInfo;
 import io.vertx.core.net.impl.ServerID;
 import io.vertx.core.shareddata.impl.ClusterSerializable;
 
@@ -29,9 +28,6 @@ public class DataConverter {
     if (t instanceof ServerID) {
       return new InfinispanServerID((ServerID) t);
     }
-    if (t instanceof ClusterNodeInfo) {
-      return new InfinispanClusterNodeInfo((ClusterNodeInfo) t);
-    }
     if (t instanceof ClusterSerializable) {
       return new InfinispanClusterSerializable((ClusterSerializable) t);
     }
@@ -42,9 +38,6 @@ public class DataConverter {
   public static <T> T fromCachedObject(Object value) {
     if (value instanceof InfinispanServerID) {
       return (T) ((InfinispanServerID) value).getServerID();
-    }
-    if (value instanceof InfinispanClusterNodeInfo) {
-      return (T) ((InfinispanClusterNodeInfo) value).getClusterNodeInfo();
     }
     if (value instanceof InfinispanClusterSerializable) {
       return (T) ((InfinispanClusterSerializable) value).getData();

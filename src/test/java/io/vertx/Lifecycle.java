@@ -20,9 +20,11 @@ import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
+import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.infinispan.health.Health;
 import org.infinispan.health.HealthStatus;
+import org.infinispan.lifecycle.ComponentStatus;
 import org.infinispan.manager.EmbeddedCacheManager;
 
 import java.util.List;
@@ -30,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.concurrent.TimeUnit.*;
+import static org.infinispan.lifecycle.ComponentStatus.STOPPING;
 
 /**
  * @author Thomas Segismont
@@ -42,10 +45,13 @@ public class Lifecycle {
     for (Vertx vertx : clustered) {
       VertxInternal vertxInternal = (VertxInternal) vertx;
 
-      InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager();
+      InfinispanClusterManager clusterManager = getInfinispanClusterManager(vertxInternal.getClusterManager());
 
+      ComponentStatus status = null;
       if (clusterManager != null) {
         EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
+        status = cacheManager.getStatus();
+
         Health health = cacheManager.getHealth();
 
         SECONDS.sleep(2); // Make sure rebalancing has been triggered
@@ -60,15 +66,29 @@ public class Lifecycle {
         }
       }
 
-      CountDownLatch latch = new CountDownLatch(1);
-      vertxInternal.close(ar -> {
-        if (ar.failed()) {
-          log.error("Failed to shutdown vert.x", ar.cause());
-        }
-        latch.countDown();
-      });
-      latch.await(2, TimeUnit.MINUTES);
+      if (status == null || status.compareTo(STOPPING) >= 0) {
+        vertxInternal.close();
+      } else {
+        CountDownLatch latch = new CountDownLatch(1);
+        vertxInternal.close(ar -> {
+          if (ar.failed()) {
+            log.error("Failed to shutdown vert.x", ar.cause());
+          }
+          latch.countDown();
+        });
+        latch.await(2, TimeUnit.MINUTES);
+      }
     }
+  }
+
+  private static InfinispanClusterManager getInfinispanClusterManager(ClusterManager cm) {
+    if (cm == null) {
+      return null;
+    }
+    if (cm instanceof InfinispanClusterManager) {
+      return (InfinispanClusterManager) cm;
+    }
+    throw new ClassCastException("Unexpected cluster manager implementation: " + cm.getClass());
   }
 
   private Lifecycle() {
