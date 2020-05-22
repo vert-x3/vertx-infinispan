@@ -156,7 +156,6 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
-      <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -173,7 +172,6 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-service-discovery</artifactId>
-      <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
