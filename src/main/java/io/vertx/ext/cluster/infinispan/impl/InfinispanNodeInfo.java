@@ -18,22 +18,20 @@ package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.shareddata.impl.ClusterSerializable;
 import io.vertx.core.spi.cluster.NodeInfo;
-import org.infinispan.commons.marshall.Externalizer;
-import org.infinispan.commons.marshall.SerializeWith;
 
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.Objects;
 
 /**
  * @author Thomas Segismont
  */
-@SerializeWith(InfinispanNodeInfo.InfinispanNodeInfoExternalizer.class)
-public class InfinispanNodeInfo {
+public class InfinispanNodeInfo implements ClusterSerializable {
 
-  private final NodeInfo nodeInfo;
+  private NodeInfo nodeInfo;
+
+  public InfinispanNodeInfo() {
+  }
 
   public InfinispanNodeInfo(NodeInfo nodeInfo) {
     this.nodeInfo = Objects.requireNonNull(nodeInfo);
@@ -43,35 +41,39 @@ public class InfinispanNodeInfo {
     return nodeInfo;
   }
 
-  public static class InfinispanNodeInfoExternalizer implements Externalizer<InfinispanNodeInfo> {
-    @Override
-    public void writeObject(ObjectOutput output, InfinispanNodeInfo object) throws IOException {
-      output.writeUTF(object.nodeInfo.host());
-      output.writeInt(object.nodeInfo.port());
-      JsonObject metadata = object.nodeInfo.metadata();
-      if (metadata != null) {
-        byte[] bytes = metadata.toBuffer().getBytes();
-        output.writeInt(bytes.length);
-        output.write(bytes);
-      } else {
-        output.writeInt(-1);
-      }
+  @Override
+  public void writeToBuffer(Buffer buffer) {
+    buffer.appendInt(nodeInfo.host().length()).appendString(nodeInfo.host());
+    buffer.appendInt(nodeInfo.port());
+    JsonObject metadata = nodeInfo.metadata();
+    if (metadata != null) {
+      Buffer metadataBuffer = metadata.toBuffer();
+      buffer.appendInt(metadata.size()).appendBuffer(metadataBuffer);
+    } else {
+      buffer.appendInt(-1);
     }
+  }
 
-    @Override
-    public InfinispanNodeInfo readObject(ObjectInput input) throws IOException, ClassNotFoundException {
-      String host = input.readUTF();
-      int port = input.readInt();
-      int metadataBytesSize = input.readInt();
-      JsonObject metadata;
-      if (metadataBytesSize < 0) {
-        metadata = null;
-      } else {
-        byte[] bytes = new byte[metadataBytesSize];
-        input.readFully(bytes);
-        metadata = new JsonObject(Buffer.buffer(bytes));
-      }
-      return new InfinispanNodeInfo(new NodeInfo(host, port, metadata));
+  @Override
+  public int readFromBuffer(int pos, Buffer buffer) {
+    int len = buffer.getInt(pos);
+    pos += 4;
+    String host = buffer.getString(pos, pos + len);
+    pos += len;
+    int port = buffer.getInt(pos);
+    pos += 4;
+    len = buffer.getInt(pos);
+    pos += 4;
+    JsonObject metadata;
+    if (len < 0) {
+      metadata = null;
+    } else if (len == 0) {
+      metadata = new JsonObject();
+    } else {
+      metadata = new JsonObject(buffer.getBuffer(pos, pos + len));
+      pos += len;
     }
+    nodeInfo = new NodeInfo(host, port, metadata);
+    return pos;
   }
 }

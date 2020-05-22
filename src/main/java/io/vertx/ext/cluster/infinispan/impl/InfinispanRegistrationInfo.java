@@ -16,57 +16,48 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.shareddata.impl.ClusterSerializable;
 import io.vertx.core.spi.cluster.RegistrationInfo;
-import org.infinispan.commons.marshall.Externalizer;
-import org.infinispan.commons.marshall.SerializeWith;
 
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.Objects;
 
 /**
  * @author Thomas Segismont
  */
-@SerializeWith(InfinispanRegistrationInfo.InfinispanRegistrationInfoExternalizer.class)
-public class InfinispanRegistrationInfo {
+public class InfinispanRegistrationInfo implements ClusterSerializable {
 
-  private final RegistrationInfo registrationInfo;
+  private RegistrationInfo registrationInfo;
+
+  public InfinispanRegistrationInfo() {
+  }
 
   public InfinispanRegistrationInfo(RegistrationInfo registrationInfo) {
     this.registrationInfo = Objects.requireNonNull(registrationInfo);
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-
-    InfinispanRegistrationInfo that = (InfinispanRegistrationInfo) o;
-
-    return registrationInfo.equals(that.registrationInfo);
-  }
-
-  @Override
-  public int hashCode() {
-    return registrationInfo.hashCode();
   }
 
   public RegistrationInfo unwrap() {
     return registrationInfo;
   }
 
-  public static class InfinispanRegistrationInfoExternalizer implements Externalizer<InfinispanRegistrationInfo> {
-    @Override
-    public void writeObject(ObjectOutput output, InfinispanRegistrationInfo object) throws IOException {
-      output.writeUTF(object.registrationInfo.nodeId());
-      output.writeLong(object.registrationInfo.seq());
-      output.writeBoolean(object.registrationInfo.localOnly());
-    }
+  @Override
+  public void writeToBuffer(Buffer buffer) {
+    buffer.appendInt(registrationInfo.nodeId().length()).appendString(registrationInfo.nodeId());
+    buffer.appendLong(registrationInfo.seq());
+    buffer.appendByte((byte) (registrationInfo.localOnly() ? 1 : 0));
+  }
 
-    @Override
-    public InfinispanRegistrationInfo readObject(ObjectInput input) throws IOException, ClassNotFoundException {
-      return new InfinispanRegistrationInfo(new RegistrationInfo(input.readUTF(), input.readLong(), input.readBoolean()));
-    }
+  @Override
+  public int readFromBuffer(int pos, Buffer buffer) {
+    int len = buffer.getInt(pos);
+    pos += 4;
+    String nodeId = buffer.getString(pos, pos + len);
+    pos += len;
+    long seq = buffer.getLong(pos);
+    pos += 8;
+    boolean localOnly = buffer.getByte(pos) > 0;
+    pos += 1;
+    registrationInfo = new RegistrationInfo(nodeId, seq, localOnly);
+    return pos;
   }
 }

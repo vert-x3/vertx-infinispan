@@ -52,7 +52,7 @@ import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +85,7 @@ public class InfinispanClusterManager implements ClusterManager {
   private EmbeddedClusteredLockManager lockManager;
   private CounterManager counterManager;
   private NodeInfo nodeInfo;
-  private AdvancedCache<String, InfinispanNodeInfo> nodeInfoCache;
+  private AdvancedCache<String, byte[]> nodeInfoCache;
   private SubsCacheHelper subsCacheHelper;
   private volatile boolean active;
   private ClusterViewListener viewListener;
@@ -127,7 +127,7 @@ public class InfinispanClusterManager implements ClusterManager {
   public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
     vertx.executeBlocking(prom -> {
       EmbeddedCacheManagerAdmin administration = cacheManager.administration();
-      Cache<Object, Object> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
+      Cache<byte[], byte[]> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
       prom.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
     }, false, promise);
   }
@@ -197,7 +197,7 @@ public class InfinispanClusterManager implements ClusterManager {
     synchronized (this) {
       this.nodeInfo = nodeInfo;
     }
-    InfinispanNodeInfo value = new InfinispanNodeInfo(nodeInfo);
+    byte[] value = DataConverter.toCachedObject(new InfinispanNodeInfo(nodeInfo));
     Future.fromCompletionStage(nodeInfoCache.withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(getNodeId(), value))
       .<Void>mapEmpty()
       .onComplete(promise);
@@ -216,7 +216,7 @@ public class InfinispanClusterManager implements ClusterManager {
       } else if (nodeInfo == null) {
         promise.fail("Not a member of the cluster");
       } else {
-        promise.complete(nodeInfo.unwrap());
+        promise.complete(DataConverter.<InfinispanNodeInfo>fromCachedObject(nodeInfo).unwrap());
       }
     });
   }
@@ -230,16 +230,15 @@ public class InfinispanClusterManager implements ClusterManager {
       }
       active = true;
       if (!userProvidedCacheManager) {
-        InputStream ispnConfigStream = null;
         try {
           FileLookup fileLookup = FileLookupFactory.newInstance();
 
-          ispnConfigStream = fileLookup.lookupFile(ispnConfigPath, getCTCCL());
-          if (ispnConfigStream == null) {
+          URL ispnConfig = fileLookup.lookupFileLocation(ispnConfigPath, getCTCCL());
+          if (ispnConfig == null) {
             log.warn("Cannot find Infinispan config '" + ispnConfigPath + "', using default");
-            ispnConfigStream = fileLookup.lookupFileStrict(DEFAULT_INFINISPAN_XML, getCTCCL());
+            ispnConfig = fileLookup.lookupFileLocation(DEFAULT_INFINISPAN_XML, getCTCCL());
           }
-          ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(ispnConfigStream);
+          ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(ispnConfig);
           // Workaround Launcher in fatjar issue (context classloader may be null)
           ClassLoader classLoader = getCTCCL();
           if (classLoader == null) {
@@ -257,8 +256,6 @@ public class InfinispanClusterManager implements ClusterManager {
         } catch (IOException e) {
           prom.fail(e);
           return;
-        } finally {
-          safeClose(ispnConfigStream);
         }
       }
       viewListener = new ClusterViewListener();
@@ -267,7 +264,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
         subsCacheHelper = new SubsCacheHelper(cacheManager, nodeSelector);
 
-        nodeInfoCache = cacheManager.<String, InfinispanNodeInfo>getCache("__vertx.nodeInfo").getAdvancedCache();
+        nodeInfoCache = cacheManager.<String, byte[]>getCache("__vertx.nodeInfo").getAdvancedCache();
 
         lockManager = (EmbeddedClusteredLockManager) EmbeddedClusteredLockManagerFactory.from(cacheManager);
         counterManager = EmbeddedCounterManagerFactory.asCounterManager(cacheManager);
@@ -281,15 +278,6 @@ public class InfinispanClusterManager implements ClusterManager {
 
   private ClassLoader getCTCCL() {
     return Thread.currentThread().getContextClassLoader();
-  }
-
-  private void safeClose(InputStream is) {
-    if (is != null) {
-      try {
-        is.close();
-      } catch (IOException ignored) {
-      }
-    }
   }
 
   @Override

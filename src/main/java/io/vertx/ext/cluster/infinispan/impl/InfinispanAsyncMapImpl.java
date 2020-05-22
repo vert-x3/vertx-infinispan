@@ -44,10 +44,10 @@ import static java.util.stream.Collectors.*;
 public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanAsyncMap<K, V> {
 
   private final VertxInternal vertx;
-  private final AdvancedCache<Object, Object> cache;
-  private AdvancedCache<Object, Object> ignoreReturnCache;
+  private final AdvancedCache<byte[], byte[]> cache;
+  private final AdvancedCache<byte[], byte[]> ignoreReturnCache;
 
-  public InfinispanAsyncMapImpl(VertxInternal vertx, Cache<Object, Object> cache) {
+  public InfinispanAsyncMapImpl(VertxInternal vertx, Cache<byte[], byte[]> cache) {
     this.vertx = vertx;
     this.cache = cache.getAdvancedCache();
     ignoreReturnCache = this.cache.withFlags(Flag.IGNORE_RETURN_VALUES);
@@ -55,66 +55,66 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
 
   @Override
   public Future<V> get(K k) {
-    Object kk = DataConverter.toCachedObject(k);
+    byte[] kk = DataConverter.toCachedObject(k);
     return Future.fromCompletionStage(cache.getAsync(kk), vertx.getOrCreateContext())
       .map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<Void> put(K k, V v) {
-    Object kk = DataConverter.toCachedObject(k);
-    Object vv = DataConverter.toCachedObject(v);
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] vv = DataConverter.toCachedObject(v);
     return Future.fromCompletionStage(ignoreReturnCache.putAsync(kk, vv), vertx.getOrCreateContext()).mapEmpty();
   }
 
   @Override
   public Future<Void> put(K k, V v, long ttl) {
-    Object kk = DataConverter.toCachedObject(k);
-    Object vv = DataConverter.toCachedObject(v);
-    CompletableFuture<Object> completionStage = ignoreReturnCache.putAsync(kk, vv, ttl, TimeUnit.MILLISECONDS);
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] vv = DataConverter.toCachedObject(v);
+    CompletableFuture<byte[]> completionStage = ignoreReturnCache.putAsync(kk, vv, ttl, TimeUnit.MILLISECONDS);
     return Future.fromCompletionStage(completionStage, vertx.getOrCreateContext()).mapEmpty();
   }
 
   @Override
   public Future<V> putIfAbsent(K k, V v) {
-    Object kk = DataConverter.toCachedObject(k);
-    Object vv = DataConverter.toCachedObject(v);
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] vv = DataConverter.toCachedObject(v);
     return Future.fromCompletionStage(cache.putIfAbsentAsync(kk, vv), vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<V> putIfAbsent(K k, V v, long ttl) {
-    Object kk = DataConverter.toCachedObject(k);
-    Object vv = DataConverter.toCachedObject(v);
-    CompletableFuture<Object> completionStage = cache.putIfAbsentAsync(kk, vv, ttl, TimeUnit.MILLISECONDS);
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] vv = DataConverter.toCachedObject(v);
+    CompletableFuture<byte[]> completionStage = cache.putIfAbsentAsync(kk, vv, ttl, TimeUnit.MILLISECONDS);
     return Future.fromCompletionStage(completionStage, vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<V> remove(K k) {
-    Object kk = DataConverter.toCachedObject(k);
+    byte[] kk = DataConverter.toCachedObject(k);
     return Future.fromCompletionStage(cache.removeAsync(kk), vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<Boolean> removeIfPresent(K k, V v) {
-    Object kk = DataConverter.toCachedObject(k);
-    Object vv = DataConverter.toCachedObject(v);
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] vv = DataConverter.toCachedObject(v);
     return Future.fromCompletionStage(cache.removeAsync(kk, vv), vertx.getOrCreateContext());
   }
 
   @Override
   public Future<V> replace(K k, V v) {
-    Object kk = DataConverter.toCachedObject(k);
-    Object vv = DataConverter.toCachedObject(v);
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] vv = DataConverter.toCachedObject(v);
     return Future.fromCompletionStage(cache.replaceAsync(kk, vv), vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
   }
 
   @Override
   public Future<Boolean> replaceIfPresent(K k, V oldValue, V newValue) {
-    Object kk = DataConverter.toCachedObject(k);
-    Object oo = DataConverter.toCachedObject(oldValue);
-    Object nn = DataConverter.toCachedObject(newValue);
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] oo = DataConverter.toCachedObject(oldValue);
+    byte[] nn = DataConverter.toCachedObject(newValue);
     return Future.fromCompletionStage(cache.replaceAsync(kk, oo, nn), vertx.getOrCreateContext());
   }
 
@@ -131,7 +131,7 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
   @Override
   public Future<Set<K>> keys() {
     return vertx.executeBlocking(promise -> {
-      Set<Object> cacheKeys = cache.keySet().stream().collect(CacheCollectors.serializableCollector(Collectors::toSet));
+      Set<byte[]> cacheKeys = cache.keySet().stream().collect(CacheCollectors.serializableCollector(Collectors::toSet));
       promise.complete(cacheKeys.stream().<K>map(DataConverter::fromCachedObject).collect(toSet()));
     }, false);
   }
@@ -139,7 +139,7 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
   @Override
   public Future<List<V>> values() {
     return vertx.executeBlocking(promise -> {
-      List<Object> cacheValues = cache.values().stream().collect(CacheCollectors.serializableCollector(Collectors::toList));
+      List<byte[]> cacheValues = cache.values().stream().collect(CacheCollectors.serializableCollector(Collectors::toList));
       promise.complete(cacheValues.stream().<V>map(DataConverter::fromCachedObject).collect(toList()));
     }, false);
   }
@@ -147,10 +147,10 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
   @Override
   public Future<Map<K, V>> entries() {
     return vertx.executeBlocking(promise -> {
-      Map<Object, Object> cacheEntries = cache.entrySet().stream()
+      Map<byte[], byte[]> cacheEntries = cache.entrySet().stream()
         .collect(CacheCollectors.serializableCollector(() -> toMap(Entry::getKey, Entry::getValue)));
       Map<K, V> result = new HashMap<>();
-      for (Entry<Object, Object> entry : cacheEntries.entrySet()) {
+      for (Entry<byte[], byte[]> entry : cacheEntries.entrySet()) {
         K k = DataConverter.fromCachedObject(entry.getKey());
         V v = DataConverter.fromCachedObject(entry.getValue());
         result.put(k, v);

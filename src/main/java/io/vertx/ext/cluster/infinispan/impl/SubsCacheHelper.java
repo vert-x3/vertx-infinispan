@@ -21,12 +21,11 @@ import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeSelector;
 import io.vertx.core.spi.cluster.RegistrationInfo;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
-import org.infinispan.commons.marshall.Externalizer;
-import org.infinispan.commons.marshall.SerializeWith;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.metadata.Metadata;
 import org.infinispan.multimap.api.embedded.EmbeddedMultimapCacheManagerFactory;
 import org.infinispan.multimap.api.embedded.MultimapCacheManager;
+import org.infinispan.multimap.impl.Bucket;
 import org.infinispan.multimap.impl.EmbeddedMultimapCache;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachelistener.annotation.CacheEntryCreated;
@@ -40,10 +39,7 @@ import org.infinispan.notifications.cachelistener.filter.CacheEventFilter;
 import org.infinispan.notifications.cachelistener.filter.EventType;
 import org.infinispan.util.function.SerializablePredicate;
 
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.lang.annotation.Annotation;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -61,14 +57,14 @@ public class SubsCacheHelper {
 
   private static final Logger log = LoggerFactory.getLogger(SubsCacheHelper.class);
 
-  private final EmbeddedMultimapCache<String, InfinispanRegistrationInfo> subsCache;
+  private final EmbeddedMultimapCache<String, byte[]> subsCache;
   private final NodeSelector nodeSelector;
   private final EntryListener entryListener;
 
   public SubsCacheHelper(DefaultCacheManager cacheManager, NodeSelector nodeSelector) {
     @SuppressWarnings("unchecked")
-    MultimapCacheManager<String, InfinispanRegistrationInfo> multimapCacheManager = EmbeddedMultimapCacheManagerFactory.from(cacheManager);
-    subsCache = (EmbeddedMultimapCache<String, InfinispanRegistrationInfo>) multimapCacheManager.get("__vertx.subs");
+    MultimapCacheManager<String, byte[]> multimapCacheManager = EmbeddedMultimapCacheManagerFactory.from(cacheManager);
+    subsCache = (EmbeddedMultimapCache<String, byte[]>) multimapCacheManager.get("__vertx.subs");
     this.nodeSelector = nodeSelector;
     entryListener = new EntryListener();
     Set<Class<? extends Annotation>> filterAnnotations = Stream.<Class<? extends Annotation>>builder()
@@ -83,20 +79,20 @@ public class SubsCacheHelper {
 
   public CompletableFuture<List<RegistrationInfo>> get(String address) {
     return subsCache.get(address)
-      .thenApply(collection -> collection.stream().map(InfinispanRegistrationInfo::unwrap).collect(toList()));
+      .thenApply(collection -> collection.stream().map(DataConverter::<InfinispanRegistrationInfo>fromCachedObject).map(InfinispanRegistrationInfo::unwrap).collect(toList()));
   }
 
   public CompletableFuture<Void> put(String address, RegistrationInfo registrationInfo) {
-    return subsCache.put(address, new InfinispanRegistrationInfo(registrationInfo));
+    return subsCache.put(address, DataConverter.toCachedObject(new InfinispanRegistrationInfo(registrationInfo)));
   }
 
   public CompletableFuture<Void> remove(String address, RegistrationInfo registrationInfo) {
-    return subsCache.remove(address, new InfinispanRegistrationInfo(registrationInfo))
+    return subsCache.remove(address, DataConverter.toCachedObject(new InfinispanRegistrationInfo(registrationInfo)))
       .thenApply(v -> null);
   }
 
   public void removeAllForNode(String nodeId) {
-    subsCache.remove((SerializablePredicate<InfinispanRegistrationInfo>) info -> nodeId.equals(info.unwrap().nodeId()));
+    subsCache.remove((SerializablePredicate<byte[]>) value -> nodeId.equals(DataConverter.<InfinispanRegistrationInfo>fromCachedObject(value).unwrap().nodeId()));
   }
 
   public void close() {
@@ -136,48 +132,22 @@ public class SubsCacheHelper {
     }
   }
 
-  @SerializeWith(EventFilterExternalizer.class)
-  private static class EventFilter implements CacheEventFilter<String, Collection<InfinispanRegistrationInfo>> {
+  private static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>> {
 
     public EventFilter() {
     }
 
     @Override
-    public boolean accept(String key, Collection<InfinispanRegistrationInfo> oldValue, Metadata oldMetadata, Collection<InfinispanRegistrationInfo> newValue, Metadata newMetadata, EventType eventType) {
+    public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
       return true;
     }
   }
 
-  public static class EventFilterExternalizer implements Externalizer<EventFilter> {
+  private static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
 
     @Override
-    public void writeObject(ObjectOutput objectOutput, EventFilter eventFilter) {
-    }
-
-    @Override
-    public EventFilter readObject(ObjectInput objectInput) {
-      return new EventFilter();
-    }
-  }
-
-  @SerializeWith(EventConverterExternalizer.class)
-  private static class EventConverter implements CacheEventConverter<String, Collection<InfinispanRegistrationInfo>, Void> {
-
-    @Override
-    public Void convert(String key, Collection<InfinispanRegistrationInfo> oldValue, Metadata oldMetadata, Collection<InfinispanRegistrationInfo> newValue, Metadata newMetadata, EventType eventType) {
+    public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
       return null;
-    }
-  }
-
-  public static class EventConverterExternalizer implements Externalizer<EventConverter> {
-
-    @Override
-    public void writeObject(ObjectOutput objectOutput, EventConverter eventConverter) {
-    }
-
-    @Override
-    public EventConverter readObject(ObjectInput objectInput) {
-      return new EventConverter();
     }
   }
 }
