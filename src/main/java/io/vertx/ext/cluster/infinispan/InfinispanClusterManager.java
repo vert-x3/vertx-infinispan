@@ -210,9 +210,15 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void getNodeInfo(String nodeId, Promise<NodeInfo> promise) {
-    Future.fromCompletionStage(nodeInfoCache.getAsync(nodeId))
-      .map(value -> value != null ? value.unwrap() : null)
-      .onComplete(promise);
+    nodeInfoCache.getAsync(nodeId).whenComplete((nodeInfo, throwable) -> {
+      if (throwable != null) {
+        promise.fail(throwable);
+      } else if (nodeInfo == null) {
+        promise.fail("Not a member of the cluster");
+      } else {
+        promise.complete(nodeInfo.unwrap());
+      }
+    });
   }
 
   @Override
