@@ -30,6 +30,7 @@ import io.vertx.ext.cluster.infinispan.impl.*;
 import org.infinispan.AdvancedCache;
 import org.infinispan.Cache;
 import org.infinispan.commons.api.BasicCacheContainer;
+import org.infinispan.commons.api.CacheContainerAdmin;
 import org.infinispan.commons.util.FileLookup;
 import org.infinispan.commons.util.FileLookupFactory;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
@@ -126,7 +127,7 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
     vertx.executeBlocking(prom -> {
-      EmbeddedCacheManagerAdmin administration = cacheManager.administration();
+      EmbeddedCacheManagerAdmin administration = cacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE);
       Cache<byte[], byte[]> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
       prom.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
     }, false, promise);
