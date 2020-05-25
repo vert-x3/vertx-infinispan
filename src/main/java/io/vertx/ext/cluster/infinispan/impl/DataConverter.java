@@ -75,9 +75,8 @@ public class DataConverter {
   }
 
   private static Object readSerializable(byte[] value) {
-    ByteArrayInputStream bais = new ByteArrayInputStream(value);
+    ByteArrayInputStream bais = new ByteArrayInputStream(value, 1, value.length - 1);
     try (ObjectInputStream in = new ObjectInputStream(bais)) {
-      in.skip(1);
       return in.readObject();
     } catch (IOException | ClassNotFoundException e) {
       throw new RuntimeException(e);
