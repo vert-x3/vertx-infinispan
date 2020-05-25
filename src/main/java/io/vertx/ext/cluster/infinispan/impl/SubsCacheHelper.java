@@ -79,20 +79,20 @@ public class SubsCacheHelper {
 
   public CompletableFuture<List<RegistrationInfo>> get(String address) {
     return subsCache.get(address)
-      .thenApply(collection -> collection.stream().map(DataConverter::<InfinispanRegistrationInfo>fromCachedObject).map(InfinispanRegistrationInfo::unwrap).collect(toList()));
+      .thenApply(collection -> collection.stream().map(DataConverter::<RegistrationInfo>fromCachedObject).collect(toList()));
   }
 
   public CompletableFuture<Void> put(String address, RegistrationInfo registrationInfo) {
-    return subsCache.put(address, DataConverter.toCachedObject(new InfinispanRegistrationInfo(registrationInfo)));
+    return subsCache.put(address, DataConverter.toCachedObject(registrationInfo));
   }
 
   public CompletableFuture<Void> remove(String address, RegistrationInfo registrationInfo) {
-    return subsCache.remove(address, DataConverter.toCachedObject(new InfinispanRegistrationInfo(registrationInfo)))
+    return subsCache.remove(address, DataConverter.toCachedObject(registrationInfo))
       .thenApply(v -> null);
   }
 
   public void removeAllForNode(String nodeId) {
-    subsCache.remove((SerializablePredicate<byte[]>) value -> nodeId.equals(DataConverter.<InfinispanRegistrationInfo>fromCachedObject(value).unwrap().nodeId()));
+    subsCache.remove((SerializablePredicate<byte[]>) value -> nodeId.equals(DataConverter.<RegistrationInfo>fromCachedObject(value).nodeId()));
   }
 
   public void close() {

@@ -197,7 +197,7 @@ public class InfinispanClusterManager implements ClusterManager {
     synchronized (this) {
       this.nodeInfo = nodeInfo;
     }
-    byte[] value = DataConverter.toCachedObject(new InfinispanNodeInfo(nodeInfo));
+    byte[] value = DataConverter.toCachedObject(nodeInfo);
     Future.fromCompletionStage(nodeInfoCache.withFlags(Flag.IGNORE_RETURN_VALUES).putAsync(getNodeId(), value))
       .<Void>mapEmpty()
       .onComplete(promise);
@@ -216,7 +216,7 @@ public class InfinispanClusterManager implements ClusterManager {
       } else if (nodeInfo == null) {
         promise.fail("Not a member of the cluster");
       } else {
-        promise.complete(DataConverter.<InfinispanNodeInfo>fromCachedObject(nodeInfo).unwrap());
+        promise.complete(DataConverter.fromCachedObject(nodeInfo));
       }
     });
   }
