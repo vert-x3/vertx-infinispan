@@ -51,6 +51,7 @@ import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
+import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 
 import java.io.IOException;
 import java.net.URL;
@@ -250,7 +251,8 @@ public class InfinispanClusterManager implements ClusterManager {
           if (fileLookup.lookupFileLocation(jgroupsConfigPath, getCTCCL()) != null) {
             log.warn("Forcing JGroups config to '" + jgroupsConfigPath + "'");
             builderHolder.getGlobalConfigurationBuilder().transport().defaultTransport()
-              .addProperty("configurationFile", jgroupsConfigPath);
+              .removeProperty(JGroupsTransport.CHANNEL_CONFIGURATOR)
+              .addProperty(JGroupsTransport.CONFIGURATION_FILE, jgroupsConfigPath);
           }
 
           cacheManager = new DefaultCacheManager(builderHolder, true);
