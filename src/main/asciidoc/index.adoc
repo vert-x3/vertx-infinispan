@@ -115,58 +115,66 @@ Notice that the custom Infinispan instance need to be configured with:
 
 == Configuring for Kubernetes
 
-On Kubernetes, JGroups should be configured to use the `KUBE_PING` protocol.
+On Kubernetes, JGroups can be configured to use either the Kubernetes API (`KUBE_PING`) or DNS (`DNS_PING`) for discovery.
+In this document, we will use DNS discovery.
 
-First, add the `org.infinispan:infinispan-cloud:${infinispan.version}` dependency to your project.
-With Maven it looks like:
-
-[source,xml]
-----
-<dependency>
-  <groupId>org.infinispan</groupId>
-  <artifactId>infinispan-cloud</artifactId>
-  <version>${infinispan.version}</version>
-</dependency>
-----
-
-Then, set the `vertx.jgroups.config` system property to `default-configs/default-jgroups-kubernetes.xml`.
-
-[source,shell]
-----
--Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml
-----
-
-This JGroups stack file is located in the `infinispan-cloud` JAR and preconfigured for Kubernetes.
-
-Also, set the project namespace as the scope for discovery.
-
-[source,Dockerfile]
-----
-ENV KUBERNETES_NAMESPACE my-project
-----
-
-Optionnaly, to create separate clusters in the same namespace, add a labels selector:
-
-[source,Dockerfile]
-----
-ENV KUBERNETES_LABELS my-label=my-value
-----
-
-Then, force usage of IPv4 in the JVM with a system property.
+First, force usage of IPv4 in the JVM with a system property.
 
 [source,shell]
 ----
 -Djava.net.preferIPv4Stack=true
 ----
 
-Eventually, the setup needs a service account.
+Then, set the `vertx.jgroups.config` system property to `default-configs/default-jgroups-kubernetes.xml`.
+This JGroups stack file is located in the `infinispan-core` JAR and preconfigured for Kubernetes.
 
 [source,shell]
 ----
-oc policy add-role-to-user view system:serviceaccount:$(oc project -q):default -n $(oc project -q)
+-Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml
 ----
 
-Further configuration details are available on the https://github.com/jgroups-extras/jgroups-kubernetes[Kubernetes discovery protocol for JGroups repository].
+Also, set the JGroups DNS query to find members.
+
+[source,shell]
+----
+-Djgroups.dns.query=MY-SERVICE-DNS-NAME
+----
+
+The `MY-SERVICE-DNS-NAME` value must be a https://kubernetes.io/docs/user-guide/services/#headless-services[*headless* Kubernetes service] name that will be used by JGroups to identify all cluster members.
+A headless service can be created with:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: clustered-app
+spec:
+  selector:
+    cluster: clustered-app # <2>
+  ports:
+    - name: jgroups
+      port: 7800 # <1>
+      protocol: TCP
+  publishNotReadyAddresses: true # <3>
+  clusterIP: None
+----
+<1> JGroups TCP port
+<2> Cluster members selected by the `cluster=clustered-app` label
+<3> Set to true so that members can be discovered without interfering with your readiness probe logic
+
+Eventually, apply the `cluster=clustered-app` label to all deployments that should be part of the cluster:
+
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    metadata:
+      labels:
+        cluster: clustered-app
+----
 
 === Rolling updates
 
