@@ -72,8 +72,7 @@ public class InfinispanFaultToleranceTest extends FaultToleranceTest {
       "-Dvertx.infinispan.config=infinispan.xml",
       "-Dvertx.jgroups.config=jgroups.xml",
       "-Dvertx.infinispan.test.auth.token=" + System.getProperty("vertx.infinispan.test.auth.token"),
-      "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
-      "-Djgroups.logging.log_factory_class=io.vertx.ext.cluster.infinispan.test.JGroupsLogFactory"
+      "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory"
     );
   }
 

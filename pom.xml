@@ -224,7 +224,6 @@
               <vertxVersion>${project.version}</vertxVersion>
               <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
               <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
-              <jgroups.logging.log_factory_class>io.vertx.ext.cluster.infinispan.test.JGroupsLogFactory</jgroups.logging.log_factory_class>
               <jgroups.join_timeout>1000</jgroups.join_timeout>
             </systemPropertyVariables>
             <!-- Needs to be small enough to run in a EC2 1.7GB small instance -->
