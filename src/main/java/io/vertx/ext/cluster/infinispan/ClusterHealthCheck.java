@@ -20,14 +20,8 @@ import io.vertx.codegen.annotations.VertxGen;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.impl.VertxInternal;
-import io.vertx.core.json.JsonObject;
+import io.vertx.ext.cluster.infinispan.impl.ClusterHealthCheckImpl;
 import io.vertx.ext.healthchecks.Status;
-import org.infinispan.health.Health;
-import org.infinispan.health.HealthStatus;
-import org.infinispan.manager.EmbeddedCacheManager;
-
-import java.util.Objects;
 
 /**
  * A helper to create Vert.x cluster {@link io.vertx.ext.healthchecks.HealthChecks} procedures.
@@ -35,36 +29,23 @@ import java.util.Objects;
  * @author Thomas Segismont
  */
 @VertxGen
-public interface ClusterHealthCheck {
+public interface ClusterHealthCheck extends Handler<Promise<Status>> {
 
   /**
    * Like {@link #createProcedure(Vertx, boolean)} with {@code details} set to {@code true}.
    */
-  static Handler<Promise<Status>> createProcedure(Vertx vertx) {
+  static ClusterHealthCheck createProcedure(Vertx vertx) {
     return createProcedure(vertx, true);
   }
 
   /**
    * Creates a ready-to-use Vert.x cluster {@link io.vertx.ext.healthchecks.HealthChecks} procedure.
    *
-   * @param vertx the instance of Vert.x, must not be {@code null}
-   * @param detailed when set to {@code true}, {@link Status#data} will be set with cluster health details
+   * @param vertx    the instance of Vert.x, must not be {@code null}
+   * @param detailed when set to {@code true}, {@link Status} data will be filled with cluster health details
    * @return a Vert.x cluster {@link io.vertx.ext.healthchecks.HealthChecks} procedure
    */
-  static Handler<Promise<Status>> createProcedure(Vertx vertx, boolean detailed) {
-    Objects.requireNonNull(vertx);
-    return future -> {
-      VertxInternal vertxInternal = (VertxInternal) vertx;
-      InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager();
-      EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
-      Health health = cacheManager.getHealth();
-      HealthStatus healthStatus = health.getClusterHealth().getHealthStatus();
-      Status status = new Status()
-        .setOk(healthStatus == HealthStatus.HEALTHY);
-      if (detailed) {
-        status.setData(JsonObject.mapFrom(health));
-      }
-      future.complete(status);
-    };
+  static ClusterHealthCheck createProcedure(Vertx vertx, boolean detailed) {
+    return new ClusterHealthCheckImpl(vertx, detailed);
   }
 }
