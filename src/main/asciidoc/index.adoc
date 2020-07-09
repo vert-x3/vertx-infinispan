@@ -1,6 +1,6 @@
 = Infinispan Cluster Manager
 
-This is a cluster manager implementation for Vert.x that uses http://infinispan.org/[Infinispan].
+This is a cluster manager implementation for Vert.x that uses https://infinispan.org/[Infinispan].
 
 This implementation is packaged inside:
 
@@ -209,7 +209,7 @@ Make sure to start the Java Virtual Machines with those system properties:
 
 [source,shell]
 ----
--Djava.net.preferIPv4Stack=true -Djgroups.tcp.address=NON_LOOPBACK
+-Djava.net.preferIPv4Stack=true -Djgroups.bind.address=NON_LOOPBACK
 ----
 
 This will make JGroups pick the interface of the virtual private network created by Docker.
@@ -241,10 +241,10 @@ element of the configuration. For example:
      />
 ----
 
-Alternatively, if you want to stick with the bundled `jgroups.xml` file, you can set the `jgroups.tcp.address` system property:
+Alternatively, if you want to stick with the bundled `jgroups.xml` file, you can set the `jgroups.bind.address` system property:
 
 ----
--Djgroups.tcp.address=192.168.1.20
+-Djgroups.bind.address=192.168.1.20
 ----
 
 When running Vert.x is in clustered mode, you should also make sure that Vert.x knows about the correct interface.
