@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
@@ -34,10 +35,12 @@ import java.util.function.BiFunction;
 public class SubsOpSerializer implements BiConsumer<Object, Throwable> {
 
   private final ContextInternal context;
+  private final Executor executor;
   private final Queue<Task> tasks;
 
   private SubsOpSerializer(ContextInternal context) {
     this.context = context;
+    this.executor = task -> context.runOnContext(v -> task.run());
     tasks = new LinkedList<>();
   }
 
@@ -68,7 +71,7 @@ public class SubsOpSerializer implements BiConsumer<Object, Throwable> {
       throw new IllegalStateException();
     }
     CompletableFuture<Void> future = task.op.apply(task.address, task.registrationInfo);
-    future.whenCompleteAsync(this, context);
+    future.whenCompleteAsync(this, executor);
   }
 
   @Override
