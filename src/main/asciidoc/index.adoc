@@ -113,6 +113,41 @@ Notice that the custom Infinispan instance need to be configured with:
 </cache-container>
 ----
 
+== Packaging an executable uber JAR
+
+Infinispan uses Java's `ServiceLoader` mechanism to discover implementations of a couple classes at runtime.
+
+You must configure your build tool to merge the following files when creating an executable uber JAR (also known as "fat" JAR):
+
+* `META-INF/services/org.infinispan.configuration.parsing.ConfigurationParser`
+* `META-INF/services/org.infinispan.factories.impl.ModuleMetadataBuilder`
+
+If you use Maven and the Maven Shade Plugin, the plugin configuration should look like:
+
+[source,xml]
+----
+<configuration>
+  <transformers>
+    <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+      <resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
+      <resource>META-INF/services/org.infinispan.configuration.parsing.ConfigurationParser</resource>
+      <resource>META-INF/services/org.infinispan.factories.impl.ModuleMetadataBuilder</resource>
+    </transformer>
+    <!-- ... -->
+  </transformers>
+  <!-- ... -->
+</configuration>
+----
+
+If you use Gradle and the Gradle Shadow Plugin, make sure all service descriptors files are merged:
+
+[source,kotlin]
+----
+shadowJar {
+  mergeServiceFiles()
+}
+----
+
 == Configuring for Kubernetes
 
 On Kubernetes, JGroups can be configured to use either the Kubernetes API (`KUBE_PING`) or DNS (`DNS_PING`) for discovery.
