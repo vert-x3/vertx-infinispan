@@ -112,6 +112,34 @@ Notice that the custom Infinispan instance need to be configured with:
 </cache-container>
 ----
 
+== Packaging an executable uber JAR
+
+Infinispan uses Java's `ServiceLoader` mechanism to discover implementations of a few classes at runtime.
+
+You must configure your build tool to merge service descriptors files when creating an executable uber JAR (also known as "fat" JAR).
+
+If you use Maven and the Maven Shade Plugin, the plugin configuration should look like:
+
+[source,xml]
+----
+<configuration>
+  <transformers>
+    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+    <!-- ... -->
+  </transformers>
+  <!-- ... -->
+</configuration>
+----
+
+If you use Gradle and the Gradle Shadow Plugin:
+
+[source,kotlin]
+----
+shadowJar {
+  mergeServiceFiles()
+}
+----
+
 == Configuring for Kubernetes
 
 On Kubernetes, JGroups should be configured to use the `KUBE_PING` protocol.
