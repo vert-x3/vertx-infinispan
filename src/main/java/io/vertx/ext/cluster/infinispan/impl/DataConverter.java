@@ -92,13 +92,18 @@ public class DataConverter {
     pos += len;
     ClusterSerializable clusterSerializable;
     try {
-      Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(new String(classNameBytes, StandardCharsets.UTF_8));
+      Class<?> clazz = getClassLoader().loadClass(new String(classNameBytes, StandardCharsets.UTF_8));
       clusterSerializable = (ClusterSerializable) clazz.newInstance();
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
     clusterSerializable.readFromBuffer(pos, buffer);
     return clusterSerializable;
+  }
+
+  private static ClassLoader getClassLoader() {
+    ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+    return tccl != null ? tccl:DataConverter.class.getClassLoader();
   }
 
   private DataConverter() {
