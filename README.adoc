@@ -1,6 +1,6 @@
 = Infinispan Cluster Manager
 
-image:https://travis-ci.org/vert-x3/vertx-infinispan.svg?branch=master["Build Status", link="https://travis-ci.org/vert-x3/vertx-infinispan"]
+image:https://github.com/vert-x3/vertx-infinispan/workflows/CI/badge.svg?branch=master["Build Status", link="https://github.com/vert-x3/vertx-infinispan/actions?query=workflow%3ACI"]
 
 This is a cluster manager implementation for Vert.x that uses http://infinispan.org[Infinispan].
 
