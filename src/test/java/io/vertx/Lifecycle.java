@@ -21,6 +21,7 @@ import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.core.spi.cluster.WrappedClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.infinispan.health.Health;
 import org.infinispan.health.HealthStatus;
@@ -84,6 +85,9 @@ public class Lifecycle {
   private static InfinispanClusterManager getInfinispanClusterManager(ClusterManager cm) {
     if (cm == null) {
       return null;
+    }
+    if (cm instanceof WrappedClusterManager) {
+      return getInfinispanClusterManager(((WrappedClusterManager) cm).getDelegate());
     }
     if (cm instanceof InfinispanClusterManager) {
       return (InfinispanClusterManager) cm;
