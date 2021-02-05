@@ -23,12 +23,12 @@
   </parent>
 
   <artifactId>vertx-infinispan</artifactId>
-  <version>4.0.2-SNAPSHOT</version>
+  <version>4.0.2</version>
 
   <name>Vert.x Infinispan Cluster Manager</name>
 
   <properties>
-    <stack.version>4.0.2-SNAPSHOT</stack.version>
+    <stack.version>4.0.2</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
     <infinispan.version>11.0.5.Final</infinispan.version>
     <jar.manifest>${project.basedir}/src/main/resources/META-INF/MANIFEST.MF</jar.manifest>
