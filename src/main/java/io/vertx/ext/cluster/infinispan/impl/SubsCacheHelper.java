@@ -22,8 +22,6 @@ import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeSelector;
 import io.vertx.core.spi.cluster.RegistrationInfo;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
-import org.infinispan.commons.marshall.WrappedByteArray;
-import org.infinispan.commons.marshall.WrappedBytes;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.metadata.Metadata;
 import org.infinispan.multimap.api.embedded.EmbeddedMultimapCacheManagerFactory;
@@ -61,7 +59,7 @@ public class SubsCacheHelper {
 
   private final VertxInternal vertx;
   private final Throttling throttling;
-  private final EmbeddedMultimapCache<String, WrappedBytes> subsCache;
+  private final EmbeddedMultimapCache<String, byte[]> subsCache;
   private final NodeSelector nodeSelector;
   private final EntryListener entryListener;
 
@@ -71,8 +69,8 @@ public class SubsCacheHelper {
     this.vertx = vertx;
     throttling = new Throttling(vertx, this::getAndUpdate);
     @SuppressWarnings("unchecked")
-    MultimapCacheManager<String, WrappedBytes> multimapCacheManager = EmbeddedMultimapCacheManagerFactory.from(cacheManager);
-    subsCache = (EmbeddedMultimapCache<String, WrappedBytes>) multimapCacheManager.get("__vertx.subs");
+    MultimapCacheManager<String, byte[]> multimapCacheManager = EmbeddedMultimapCacheManagerFactory.from(cacheManager);
+    subsCache = (EmbeddedMultimapCache<String, byte[]>) multimapCacheManager.get("__vertx.subs");
     this.nodeSelector = nodeSelector;
     entryListener = new EntryListener();
     Set<Class<? extends Annotation>> filterAnnotations = Stream.<Class<? extends Annotation>>builder()
@@ -106,9 +104,8 @@ public class SubsCacheHelper {
         } else {
           list = new ArrayList<>(size);
         }
-        for (WrappedBytes wrappedBytes : remote) {
-          RegistrationInfo unwrap = DataConverter.fromCachedObject(wrappedBytes.getBytes());
-          list.add(unwrap);
+        for (byte[] value : remote) {
+          list.add(DataConverter.fromCachedObject(value));
         }
         return list;
       });
@@ -120,8 +117,7 @@ public class SubsCacheHelper {
       vertx.getOrCreateContext().runOnContext(v -> fireRegistrationUpdateEvent(address));
       return CompletableFuture.completedFuture(null);
     } else {
-      byte[] bytes = DataConverter.toCachedObject(registrationInfo);
-      return subsCache.put(address, new WrappedByteArray(bytes));
+      return subsCache.put(address, DataConverter.toCachedObject(registrationInfo));
     }
   }
 
@@ -137,8 +133,7 @@ public class SubsCacheHelper {
       vertx.getOrCreateContext().runOnContext(v -> fireRegistrationUpdateEvent(address));
       return CompletableFuture.completedFuture(null);
     } else {
-      byte[] bytes = DataConverter.toCachedObject(registrationInfo);
-      return subsCache.remove(address, new WrappedByteArray(bytes)).thenApply(v -> null);
+      return subsCache.remove(address, DataConverter.toCachedObject(registrationInfo)).thenApply(v -> null);
     }
   }
 
@@ -148,10 +143,7 @@ public class SubsCacheHelper {
   }
 
   public void removeAllForNode(String nodeId) {
-    subsCache.remove((SerializablePredicate<WrappedBytes>) value -> {
-      RegistrationInfo registrationInfo = DataConverter.fromCachedObject(value.getBytes());
-      return nodeId.equals(registrationInfo.nodeId());
-    });
+    subsCache.remove((SerializablePredicate<byte[]>) value -> nodeId.equals(DataConverter.<RegistrationInfo>fromCachedObject(value).nodeId()));
   }
 
   public void close() {
@@ -198,21 +190,21 @@ public class SubsCacheHelper {
     }
   }
 
-  private static class EventFilter implements CacheEventFilter<String, Bucket<WrappedBytes>> {
+  private static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>> {
 
     public EventFilter() {
     }
 
     @Override
-    public boolean accept(String key, Bucket<WrappedBytes> oldValue, Metadata oldMetadata, Bucket<WrappedBytes> newValue, Metadata newMetadata, EventType eventType) {
+    public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
       return true;
     }
   }
 
-  private static class EventConverter implements CacheEventConverter<String, Bucket<WrappedBytes>, Void> {
+  private static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
 
     @Override
-    public Void convert(String key, Bucket<WrappedBytes> oldValue, Metadata oldMetadata, Bucket<WrappedBytes> newValue, Metadata newMetadata, EventType eventType) {
+    public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
       return null;
     }
   }
