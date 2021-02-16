@@ -17,14 +17,12 @@
 package io.vertx.core;
 
 import io.vertx.Lifecycle;
-import io.vertx.core.impl.logging.Logger;
-import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 
-import java.math.BigInteger;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -33,12 +31,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class InfinispanComplexHATest extends ComplexHATest {
 
-  private static final Logger log = LoggerFactory.getLogger(InfinispanComplexHATest.class);
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Override
   public void setUp() throws Exception {
-    Random random = new Random();
-    System.setProperty("vertx.infinispan.test.auth.token", new BigInteger(128, random).toString(32));
+    System.setProperty("jgroups.file.location", temporaryFolder.newFolder().getAbsolutePath());
     super.setUp();
   }
 
