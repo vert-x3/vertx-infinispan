@@ -227,7 +227,7 @@
               <jgroups.join_timeout>1000</jgroups.join_timeout>
             </systemPropertyVariables>
             <!-- Needs to be small enough to run in a EC2 1.7GB small instance -->
-            <argLine>-Xmx1200M</argLine>
+            <argLine>-Xmx1200M -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${project.build.directory}</argLine>
             <forkCount>1</forkCount>
             <reuseForks>true</reuseForks>
             <excludes>
