@@ -32,8 +32,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-// Ignore clustered counter tests until ISPN-9608 is resolved
-@Ignore
 public class InfinispanClusteredSharedCounterTest extends ClusteredSharedCounterTest {
 
   @Rule
