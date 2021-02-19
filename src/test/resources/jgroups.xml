@@ -33,6 +33,7 @@
        thread_dumps_threshold="${jgroups.thread_dumps_threshold:10000}"
   />
   <FILE_PING location="${jgroups.file.location}"
+             register_shutdown_hook="false"
   />
   <MERGE3 min_interval="10000"
           max_interval="30000"
