@@ -267,7 +267,7 @@ public class InfinispanClusterManager implements ClusterManager {
       cacheManager.addListener(viewListener);
       try {
 
-        subsCacheHelper = new SubsCacheHelper(cacheManager, nodeSelector);
+        subsCacheHelper = new SubsCacheHelper(vertx, cacheManager, nodeSelector);
 
         nodeInfoCache = cacheManager.<String, byte[]>getCache("__vertx.nodeInfo").getAdvancedCache();
 
