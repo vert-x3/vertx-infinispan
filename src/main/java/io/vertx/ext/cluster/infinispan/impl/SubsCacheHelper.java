@@ -43,13 +43,12 @@ import org.infinispan.notifications.cachelistener.filter.EventType;
 import org.infinispan.util.function.SerializablePredicate;
 
 import java.lang.annotation.Annotation;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
 
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.infinispan.notifications.Listener.Observation.POST;
 
@@ -60,12 +59,16 @@ public class SubsCacheHelper {
 
   private static final Logger log = LoggerFactory.getLogger(SubsCacheHelper.class);
 
+  private final VertxInternal vertx;
   private final Throttling throttling;
   private final EmbeddedMultimapCache<String, WrappedBytes> subsCache;
   private final NodeSelector nodeSelector;
   private final EntryListener entryListener;
 
+  private final ConcurrentMap<String, Set<RegistrationInfo>> localSubs = new ConcurrentHashMap<>();
+
   public SubsCacheHelper(VertxInternal vertx, DefaultCacheManager cacheManager, NodeSelector nodeSelector) {
+    this.vertx = vertx;
     throttling = new Throttling(vertx, this::getAndUpdate);
     @SuppressWarnings("unchecked")
     MultimapCacheManager<String, WrappedBytes> multimapCacheManager = EmbeddedMultimapCacheManagerFactory.from(cacheManager);
@@ -84,23 +87,64 @@ public class SubsCacheHelper {
 
   public CompletableFuture<List<RegistrationInfo>> get(String address) {
     return subsCache.get(address)
-      .thenApply(collection -> {
-        return collection.stream()
-          .map(WrappedBytes::getBytes)
-          .map(DataConverter::<RegistrationInfo>fromCachedObject)
-          .collect(toList());
+      .thenApply(remote -> {
+        List<RegistrationInfo> list;
+        int size;
+        size = remote.size();
+        Set<RegistrationInfo> local = localSubs.get(address);
+        if (local != null) {
+          synchronized (local) {
+            size += local.size();
+            if (size == 0) {
+              return Collections.emptyList();
+            }
+            list = new ArrayList<>(size);
+            list.addAll(local);
+          }
+        } else if (size == 0) {
+          return Collections.emptyList();
+        } else {
+          list = new ArrayList<>(size);
+        }
+        for (WrappedBytes wrappedBytes : remote) {
+          RegistrationInfo unwrap = DataConverter.fromCachedObject(wrappedBytes.getBytes());
+          list.add(unwrap);
+        }
+        return list;
       });
   }
 
   public CompletableFuture<Void> put(String address, RegistrationInfo registrationInfo) {
-    byte[] bytes = DataConverter.toCachedObject(registrationInfo);
-    return subsCache.put(address, new WrappedByteArray(bytes));
+    if (registrationInfo.localOnly()) {
+      localSubs.compute(address, (add, curr) -> addToSet(registrationInfo, curr));
+      vertx.getOrCreateContext().runOnContext(v -> fireRegistrationUpdateEvent(address));
+      return CompletableFuture.completedFuture(null);
+    } else {
+      byte[] bytes = DataConverter.toCachedObject(registrationInfo);
+      return subsCache.put(address, new WrappedByteArray(bytes));
+    }
+  }
+
+  private Set<RegistrationInfo> addToSet(RegistrationInfo registrationInfo, Set<RegistrationInfo> curr) {
+    Set<RegistrationInfo> res = curr != null ? curr : Collections.synchronizedSet(new LinkedHashSet<>());
+    res.add(registrationInfo);
+    return res;
   }
 
   public CompletableFuture<Void> remove(String address, RegistrationInfo registrationInfo) {
-    byte[] bytes = DataConverter.toCachedObject(registrationInfo);
-    return subsCache.remove(address, new WrappedByteArray(bytes))
-      .thenApply(v -> null);
+    if (registrationInfo.localOnly()) {
+      localSubs.computeIfPresent(address, (add, curr) -> removeFromSet(registrationInfo, curr));
+      vertx.getOrCreateContext().runOnContext(v -> fireRegistrationUpdateEvent(address));
+      return CompletableFuture.completedFuture(null);
+    } else {
+      byte[] bytes = DataConverter.toCachedObject(registrationInfo);
+      return subsCache.remove(address, new WrappedByteArray(bytes)).thenApply(v -> null);
+    }
+  }
+
+  private Set<RegistrationInfo> removeFromSet(RegistrationInfo registrationInfo, Set<RegistrationInfo> curr) {
+    curr.remove(registrationInfo);
+    return curr.isEmpty() ? null : curr;
   }
 
   public void removeAllForNode(String nodeId) {
