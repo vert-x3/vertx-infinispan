@@ -16,6 +16,7 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.NodeSelector;
@@ -59,11 +60,13 @@ public class SubsCacheHelper {
 
   private static final Logger log = LoggerFactory.getLogger(SubsCacheHelper.class);
 
+  private final Throttling throttling;
   private final EmbeddedMultimapCache<String, WrappedBytes> subsCache;
   private final NodeSelector nodeSelector;
   private final EntryListener entryListener;
 
-  public SubsCacheHelper(DefaultCacheManager cacheManager, NodeSelector nodeSelector) {
+  public SubsCacheHelper(VertxInternal vertx, DefaultCacheManager cacheManager, NodeSelector nodeSelector) {
+    throttling = new Throttling(vertx, this::getAndUpdate);
     @SuppressWarnings("unchecked")
     MultimapCacheManager<String, WrappedBytes> multimapCacheManager = EmbeddedMultimapCacheManagerFactory.from(cacheManager);
     subsCache = (EmbeddedMultimapCache<String, WrappedBytes>) multimapCacheManager.get("__vertx.subs");
@@ -112,16 +115,21 @@ public class SubsCacheHelper {
   }
 
   private void fireRegistrationUpdateEvent(String address) {
+    throttling.onEvent(address);
+  }
+
+  private CompletableFuture<?> getAndUpdate(String address) {
     if (nodeSelector.wantsUpdatesFor(address)) {
-      get(address).whenComplete((registrationInfos, throwable) -> {
+      return get(address).whenComplete((registrationInfos, throwable) -> {
         if (throwable == null) {
           nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
         } else {
-          log.trace("A failure occured while retrieving the updated registrations", throwable);
+          log.trace("A failure occurred while retrieving the updated registrations", throwable);
           nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, Collections.emptyList()));
         }
       });
     }
+    return CompletableFuture.<Void>completedFuture(null);
   }
 
   @Listener(clustered = true, observation = POST, sync = false)
