@@ -112,14 +112,16 @@ public class SubsCacheHelper {
   }
 
   private void fireRegistrationUpdateEvent(String address) {
-    get(address).whenComplete((registrationInfos, throwable) -> {
-      if (throwable == null) {
-        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
-      } else {
-        log.trace("A failure occured while retrieving the updated registrations", throwable);
-        nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, Collections.emptyList()));
-      }
-    });
+    if (nodeSelector.wantsUpdatesFor(address)) {
+      get(address).whenComplete((registrationInfos, throwable) -> {
+        if (throwable == null) {
+          nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, registrationInfos));
+        } else {
+          log.trace("A failure occured while retrieving the updated registrations", throwable);
+          nodeSelector.registrationsUpdated(new RegistrationUpdateEvent(address, Collections.emptyList()));
+        }
+      });
+    }
   }
 
   @Listener(clustered = true, observation = POST, sync = false)
