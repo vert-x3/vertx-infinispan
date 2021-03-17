@@ -59,19 +59,27 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
 
   @Override
   public SessionStore init(Vertx vertx, JsonObject options) {
+    return init(vertx, options, null);
+  }
+
+  public SessionStore init(Vertx vertx, JsonObject options, RemoteCacheManager remoteCacheManager) {
     this.vertx = (VertxInternal) vertx;
     this.options = Objects.requireNonNull(options, "options are required");
     random = VertxContextPRNG.current(vertx);
-    ConfigurationBuilder builder = new ConfigurationBuilder();
-    JsonArray servers = Objects.requireNonNull(options.getJsonArray("servers"), "servers list is required");
-    for (Object object : servers) {
-      if (object instanceof JsonObject) {
-        JsonObject server = (JsonObject) object;
-        configure(builder.addServer(), server);
+    if (remoteCacheManager != null) {
+      this.remoteCacheManager = remoteCacheManager;
+    } else {
+      ConfigurationBuilder builder = new ConfigurationBuilder();
+      JsonArray servers = Objects.requireNonNull(options.getJsonArray("servers"), "servers list is required");
+      for (Object object : servers) {
+        if (object instanceof JsonObject) {
+          JsonObject server = (JsonObject) object;
+          configure(builder.addServer(), server);
+        }
       }
+      this.remoteCacheManager = new RemoteCacheManager(builder.build());
     }
-    remoteCacheManager = new RemoteCacheManager(builder.build());
-    sessions = remoteCacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE)
+    sessions = this.remoteCacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE)
       .getOrCreateCache(DEFAULT_SESSION_MAP_NAME, DefaultTemplate.DIST_SYNC);
     return this;
   }

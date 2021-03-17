@@ -16,11 +16,17 @@
 
 package io.vertx.ext.web.sstore.infinispan;
 
+import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.codegen.annotations.VertxGen;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.sstore.SessionStore;
 import io.vertx.ext.web.sstore.infinispan.impl.InfinispanSessionStoreImpl;
+import org.infinispan.client.hotrod.RemoteCacheManager;
+
+import java.util.Objects;
+
+import static io.vertx.codegen.annotations.GenIgnore.PERMITTED_TYPE;
 
 /**
  * An implementation of {@link SessionStore} that relies on the Infinispan Java Client.
@@ -36,8 +42,23 @@ public interface InfinispanSessionStore extends SessionStore {
    * @return the new instance
    */
   static InfinispanSessionStore create(Vertx vertx, JsonObject options) {
-    InfinispanSessionStore store = new InfinispanSessionStoreImpl();
+    InfinispanSessionStoreImpl store = new InfinispanSessionStoreImpl();
     store.init(vertx, options);
+    return store;
+  }
+
+  /**
+   * Like {@link #create(Vertx, JsonObject)} but with a pre-configured Infinispan Client.
+   *
+   * @param vertx              vertx instance
+   * @param options            the configuration
+   * @param remoteCacheManager pre-configured Infinispan Client
+   * @return the new instance
+   */
+  @GenIgnore(PERMITTED_TYPE)
+  static InfinispanSessionStore create(Vertx vertx, JsonObject options, RemoteCacheManager remoteCacheManager) {
+    InfinispanSessionStoreImpl store = new InfinispanSessionStoreImpl();
+    store.init(vertx, options, Objects.requireNonNull(remoteCacheManager, "remoteCacheManager is required"));
     return store;
   }
 }
