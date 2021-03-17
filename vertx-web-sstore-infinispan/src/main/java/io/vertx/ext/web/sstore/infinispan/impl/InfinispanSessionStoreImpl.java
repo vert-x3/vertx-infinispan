@@ -22,6 +22,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.VertxContextPRNG;
 import io.vertx.ext.web.Session;
@@ -59,22 +60,31 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
   @Override
   public SessionStore init(Vertx vertx, JsonObject options) {
     this.vertx = (VertxInternal) vertx;
-    this.options = options;
+    this.options = Objects.requireNonNull(options, "options are required");
     random = VertxContextPRNG.current(vertx);
     ConfigurationBuilder builder = new ConfigurationBuilder();
-    ServerConfigurationBuilder server = builder.addServer()
-      .host(options.getString("host", "localhost"))
-      .port(options.getInteger("port", DEFAULT_HOTROD_PORT));
-    server
-      .security().authentication()
-      .username(Objects.requireNonNull(options.getString("username")))
-      .password(Objects.requireNonNull(options.getString("password")))
-      .realm(options.getString("realm", "default"))
-      .saslMechanism(options.getString("saslMechanism", "DIGEST-MD5"));
+    JsonArray servers = Objects.requireNonNull(options.getJsonArray("servers"), "servers list is required");
+    for (Object object : servers) {
+      if (object instanceof JsonObject) {
+        JsonObject server = (JsonObject) object;
+        configure(builder.addServer(), server);
+      }
+    }
     remoteCacheManager = new RemoteCacheManager(builder.build());
     sessions = remoteCacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE)
       .getOrCreateCache(DEFAULT_SESSION_MAP_NAME, DefaultTemplate.DIST_SYNC);
     return this;
+  }
+
+  private static void configure(ServerConfigurationBuilder builder, JsonObject server) {
+    builder
+      .host(server.getString("host", "localhost"))
+      .port(server.getInteger("port", DEFAULT_HOTROD_PORT));
+    builder.security().authentication()
+      .username(Objects.requireNonNull(server.getString("username"), "username is required"))
+      .password(Objects.requireNonNull(server.getString("password"), "password is required"))
+      .realm(server.getString("realm", "default"))
+      .saslMechanism(server.getString("saslMechanism", "DIGEST-MD5"));
   }
 
   @Override

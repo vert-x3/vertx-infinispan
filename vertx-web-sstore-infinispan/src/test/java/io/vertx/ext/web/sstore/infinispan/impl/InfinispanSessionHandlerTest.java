@@ -16,6 +16,7 @@
 
 package io.vertx.ext.web.sstore.infinispan.impl;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.handler.SessionHandlerTestBase;
 import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
@@ -27,22 +28,27 @@ import static org.infinispan.client.hotrod.impl.ConfigurationProperties.DEFAULT_
 
 public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
 
+  private static final String USER = "foo";
+  private static final String PASS = "bar";
+
   @ClassRule
-  public static GenericContainer container =
-    new GenericContainer("infinispan/server:12.1")
+  public static GenericContainer<?> container =
+    new GenericContainer<>("infinispan/server:12.1")
       .withExposedPorts(DEFAULT_HOTROD_PORT)
-      .withEnv("USER", "foo")
-      .withEnv("PASS", "bar")
+      .withEnv("USER", USER)
+      .withEnv("PASS", PASS)
       .waitingFor(new LogMessageWaitStrategy().withRegEx(".*Infinispan Server.*started in.*\\s"));
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
     JsonObject config = new JsonObject()
-      .put("host", container.getHost())
-      .put("port", container.getMappedPort(DEFAULT_HOTROD_PORT))
-      .put("username", "foo")
-      .put("password", "bar");
+      .put("servers", new JsonArray().add(new JsonObject()
+        .put("host", container.getHost())
+        .put("port", container.getMappedPort(DEFAULT_HOTROD_PORT))
+        .put("username", USER)
+        .put("password", PASS)
+      ));
     store = InfinispanSessionStore.create(vertx, config);
   }
 }
