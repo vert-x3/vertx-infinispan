@@ -139,7 +139,7 @@ public class InfinispanSessionStoreImpl implements SessionStore {
     SharedDataSessionImpl sessionImpl = (SharedDataSessionImpl) session;
     sessionImpl.writeToBuffer(buffer);
 
-    CompletableFuture<byte[]> putAsync = sessions.putAsync(session.id(), buffer.getBytes(), Long.MAX_VALUE, MILLISECONDS, session.timeout(), MILLISECONDS);
+    CompletableFuture<byte[]> putAsync = sessions.putAsync(session.id(), buffer.getBytes(), 2 * session.timeout(), MILLISECONDS, session.timeout(), MILLISECONDS);
     return Future.fromCompletionStage(putAsync, vertx.getOrCreateContext()).mapEmpty();
   }
 
