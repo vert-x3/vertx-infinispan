@@ -86,14 +86,19 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
   }
 
   private static void configure(ServerConfigurationBuilder builder, JsonObject server) {
-    builder
-      .host(server.getString("host", "localhost"))
-      .port(server.getInteger("port", DEFAULT_HOTROD_PORT));
-    builder.security().authentication()
-      .username(Objects.requireNonNull(server.getString("username"), "username is required"))
-      .password(Objects.requireNonNull(server.getString("password"), "password is required"))
-      .realm(server.getString("realm", "default"))
-      .saslMechanism(server.getString("saslMechanism", "DIGEST-MD5"));
+    String uri = server.getString("uri");
+    if (uri != null) {
+      builder.uri(uri);
+    } else {
+      builder
+        .host(server.getString("host", "localhost"))
+        .port(server.getInteger("port", DEFAULT_HOTROD_PORT));
+      builder.security().authentication()
+        .username(Objects.requireNonNull(server.getString("username"), "username is required"))
+        .password(Objects.requireNonNull(server.getString("password"), "password is required"))
+        .realm(server.getString("realm", "default"))
+        .saslMechanism(server.getString("saslMechanism", "DIGEST-MD5"));
+    }
   }
 
   @Override

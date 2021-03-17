@@ -52,12 +52,15 @@ The root entries are:
 
 The entries for a server definition are:
 
+* `uri` : optional, a https://infinispan.org/blog/2020/05/26/hotrod-uri/[Hot Rod URI]
 * `host`: optional (defaults to `localhost`)
 * `port`: optional (defaults to `11222`)
 * `username`: mandatory
 * `password`: mandatory
 * `realm`: optional (defaults to `default`)
 * `saslMechanism`: optional (defaults to `DIGEST-MD5`)
+
+IMPORTANT: If the `uri` entry is set, the others are ignored.
 
 === Custom Infinispan Client
 
