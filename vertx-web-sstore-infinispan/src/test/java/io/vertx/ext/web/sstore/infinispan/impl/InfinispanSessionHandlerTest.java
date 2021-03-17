@@ -18,6 +18,7 @@ package io.vertx.ext.web.sstore.infinispan.impl;
 
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.handler.SessionHandlerTestBase;
+import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
 import org.junit.ClassRule;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
@@ -37,12 +38,11 @@ public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    store = new InfinispanSessionStoreImpl();
     JsonObject config = new JsonObject()
       .put("host", container.getHost())
       .put("port", container.getMappedPort(DEFAULT_HOTROD_PORT))
       .put("username", "foo")
       .put("password", "bar");
-    store.init(vertx, config);
+    store = InfinispanSessionStore.create(vertx, config);
   }
 }

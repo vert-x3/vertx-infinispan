@@ -28,6 +28,7 @@ import io.vertx.ext.web.Session;
 import io.vertx.ext.web.sstore.AbstractSession;
 import io.vertx.ext.web.sstore.SessionStore;
 import io.vertx.ext.web.sstore.impl.SharedDataSessionImpl;
+import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
 import org.infinispan.client.hotrod.DefaultTemplate;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
@@ -43,7 +44,7 @@ import static io.vertx.ext.web.sstore.ClusteredSessionStore.DEFAULT_SESSION_MAP_
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.infinispan.client.hotrod.impl.ConfigurationProperties.DEFAULT_HOTROD_PORT;
 
-public class InfinispanSessionStoreImpl implements SessionStore {
+public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
 
   private VertxInternal vertx;
   private JsonObject options;
@@ -52,6 +53,7 @@ public class InfinispanSessionStoreImpl implements SessionStore {
   private RemoteCache<String, byte[]> sessions;
 
   public InfinispanSessionStoreImpl() {
+    // Required by service loader
   }
 
   @Override
