@@ -39,6 +39,7 @@ public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
     super.setUp();
     store = new InfinispanSessionStoreImpl();
     JsonObject config = new JsonObject()
+      .put("host", container.getHost())
       .put("port", container.getMappedPort(DEFAULT_HOTROD_PORT))
       .put("username", "foo")
       .put("password", "bar");
