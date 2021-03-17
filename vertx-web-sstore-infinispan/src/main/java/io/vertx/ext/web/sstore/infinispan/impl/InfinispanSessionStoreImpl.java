@@ -79,8 +79,9 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
       }
       this.remoteCacheManager = new RemoteCacheManager(builder.build());
     }
+    String cacheName = options.getString("cacheName", DEFAULT_SESSION_MAP_NAME);
     sessions = this.remoteCacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE)
-      .getOrCreateCache(DEFAULT_SESSION_MAP_NAME, DefaultTemplate.DIST_SYNC);
+      .getOrCreateCache(cacheName, DefaultTemplate.DIST_SYNC);
     return this;
   }
 
