@@ -30,7 +30,7 @@
   <properties>
     <stack.version>4.1.0-SNAPSHOT</stack.version>
     <asciidoc.dir>${project.basedir}/src/main/asciidoc</asciidoc.dir>
-    <infinispan.version>12.0.1.Final</infinispan.version>
+    <infinispan.version>12.0.2.Final</infinispan.version>
     <jar.manifest>${project.basedir}/src/main/resources/META-INF/MANIFEST.MF</jar.manifest>
   </properties>
 
