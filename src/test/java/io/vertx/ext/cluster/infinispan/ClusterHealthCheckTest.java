@@ -16,9 +16,19 @@
 
 package io.vertx.ext.cluster.infinispan;
 
+import io.vertx.Lifecycle;
+import io.vertx.LoggingTestWatcher;
+import io.vertx.core.*;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.test.core.VertxTestBase;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -26,6 +36,45 @@ import static org.infinispan.health.HealthStatus.HEALTHY;
 import static org.infinispan.health.HealthStatus.HEALTHY_REBALANCING;
 
 public class ClusterHealthCheckTest extends VertxTestBase {
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Override
+  public void setUp() throws Exception {
+    System.setProperty("jgroups.file.location", temporaryFolder.newFolder().getAbsolutePath());
+    super.setUp();
+  }
+
+  @Override
+  protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
+    CountDownLatch latch = new CountDownLatch(1);
+    Promise<Vertx> promise = Promise.promise();
+    promise.future().onComplete(ar);
+    super.clusteredVertx(options, asyncResult -> {
+      if (asyncResult.succeeded()) {
+        promise.complete(asyncResult.result());
+      } else {
+        promise.fail(asyncResult.cause());
+      }
+      latch.countDown();
+    });
+    try {
+      assertTrue(latch.await(2, TimeUnit.MINUTES));
+    } catch (InterruptedException e) {
+      fail(e.getMessage());
+    }
+  }
+
+  @Override
+  protected ClusterManager getClusterManager() {
+    return new InfinispanClusterManager();
+  }
+
+  @Override
+  protected void closeClustered(List<Vertx> clustered) throws Exception {
+    Lifecycle.closeClustered(clustered);
+  }
 
   @Test
   public void testDetailedHealthCheck() {

@@ -25,9 +25,7 @@ import io.vertx.servicediscovery.impl.DiscoveryImpl;
 import io.vertx.servicediscovery.impl.DiscoveryImplTestBase;
 import org.junit.Before;
 import org.junit.Rule;
-
-import java.math.BigInteger;
-import java.util.Random;
+import org.junit.rules.TemporaryFolder;
 
 import static com.jayway.awaitility.Awaitility.await;
 
@@ -39,10 +37,12 @@ public class InfinispanDiscoveryImplClusteredTest extends DiscoveryImplTestBase 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Before
-  public void setUp() {
-    Random random = new Random();
-    System.setProperty("vertx.infinispan.test.auth.token", new BigInteger(128, random).toString(32));
+  public void setUp() throws Exception {
+    System.setProperty("jgroups.file.location", temporaryFolder.newFolder().getAbsolutePath());
 
     VertxOptions options = new VertxOptions()
       .setClusterManager(new InfinispanClusterManager());

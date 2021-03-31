@@ -27,6 +27,11 @@ jobs:
           java-version: ${{ matrix.jdk }}
       - name: Run tests
         run: mvn -B -DtestLogLevel=OFF test
+      - uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: heap-dump
+          path: target/*.hprof
   Deploy:
     name: Deploy to OSSRH
     if: ${{ github.repository_owner == 'vert-x3' && (github.event_name == 'push' || github.event_name == 'schedule') }}

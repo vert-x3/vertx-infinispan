@@ -17,6 +17,7 @@
 <config xmlns="urn:org:jgroups"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="urn:org:jgroups http://www.jgroups.org/schema/jgroups-4.2.xsd">
+  <!-- jgroups.tcp.address is deprecated and will be removed, see ISPN-11867 -->
   <TCP bind_addr="${jgroups.bind.address,jgroups.tcp.address:SITE_LOCAL}"
        bind_port="${jgroups.bind.port,jgroups.tcp.port:7800}"
        enable_diagnostics="false"
@@ -28,17 +29,16 @@
        thread_pool.min_threads="${jgroups.thread_pool.min_threads:0}"
        thread_pool.max_threads="${jgroups.thread_pool.max_threads:200}"
        thread_pool.keep_alive_time="60000"
+
+       thread_dumps_threshold="${jgroups.thread_dumps_threshold:10000}"
   />
-  <MPING bind_addr="${jgroups.bind.address,jgroups.tcp.address:127.0.0.1}"
-         mcast_addr="${jgroups.mcast_addr:228.6.7.8}"
-         mcast_port="${jgroups.mcast_port:46655}"
-         num_discovery_runs="3"
-         ip_ttl="${jgroups.udp.ip_ttl:2}"
+  <FILE_PING location="${jgroups.file.location}"
+             register_shutdown_hook="false"
   />
   <MERGE3 min_interval="10000"
           max_interval="30000"
   />
-  <FD_SOCK />
+  <FD_SOCK/>
   <!-- Suspect node `timeout` to `timeout + timeout_check_interval` millis after the last heartbeat -->
   <FD_ALL timeout="10000"
           interval="2000"
@@ -61,7 +61,6 @@
                  desired_avg_gossip="5000"
                  max_bytes="1M"
   />
-  <AUTH auth_class="org.jgroups.auth.SimpleToken" auth_value="${vertx.infinispan.test.auth.token:default-token}"/>
   <pbcast.GMS print_local_addr="false"
               join_timeout="${jgroups.join_timeout:2000}"
   />
