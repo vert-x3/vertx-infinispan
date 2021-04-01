@@ -1,0 +1,73 @@
+= Infinispan Web Session Store
+
+An implementation of {@link io.vertx.ext.web.sstore.SessionStore} that relies on the https://infinispan.org/[Infinispan] Java Client.
+
+WARNING: This module has _Tech Preview_ status, this means the API can change between versions.
+
+== Getting started
+
+To use this module, add the following to the _dependencies_ section of your Maven POM file:
+
+[source,xml,subs="+attributes"]
+----
+<dependency>
+  <groupId>${maven.groupId}</groupId>
+  <artifactId>${maven.artifactId}</artifactId>
+  <version>${maven.version}</version>
+</dependency>
+----
+
+Or, if you use Gradle:
+
+[source,groovy,subs="+attributes"]
+----
+compile '${maven.groupId}:${maven.artifactId}:${maven.version}'
+----
+
+== Using
+
+If this session store is the only one you have in your dependencies, you can initialize it in a generic way:
+
+[source,$lang]
+----
+{@link examples.Examples#simpleSetup}
+----
+
+Otherwise, use the {@link io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore} type explicitely:
+
+[source,$lang]
+----
+{@link examples.Examples#explicitSetup}
+----
+
+== Configuring
+
+=== Config entries
+
+The root entries are:
+
+* `servers`: mandatory, a JSON array of server definitions (see below)
+* `cacheName`: optional, the name of the cache used to store session data (defaults to `vertx-web.sessions`)
+* `retryTimeout`: optional, the retry timeout value in milli-seconds used by the session handler when it retrieves a value from the store (defaults to `5000`)
+
+The entries for a server definition are:
+
+* `uri` : optional, a https://infinispan.org/blog/2020/05/26/hotrod-uri/[Hot Rod URI]
+* `host`: optional (defaults to `localhost`)
+* `port`: optional (defaults to `11222`)
+* `username`: mandatory
+* `password`: mandatory
+* `realm`: optional (defaults to `default`)
+* `saslMechanism`: optional (defaults to `DIGEST-MD5`)
+
+IMPORTANT: If the `uri` entry is set, the others are ignored.
+
+=== Custom Infinispan Client
+
+For advanced configuration requirements, you can provide a custom https://docs.jboss.org/infinispan/12.1/apidocs/org/infinispan/client/hotrod/RemoteCacheManager.html[`RemoteCacheManager`]:
+
+[source,$lang]
+----
+{@link examples.Examples#customClient}
+----
+
