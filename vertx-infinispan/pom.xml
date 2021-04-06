@@ -63,7 +63,16 @@
           <groupId>io.reactivex.rxjava2</groupId>
           <artifactId>rxjava</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.wildfly.common</groupId>
+          <artifactId>wildfly-common</artifactId>
+        </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.wildfly.common</groupId>
+      <artifactId>wildfly-common</artifactId>
+      <version>1.5.1.Final</version>
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
