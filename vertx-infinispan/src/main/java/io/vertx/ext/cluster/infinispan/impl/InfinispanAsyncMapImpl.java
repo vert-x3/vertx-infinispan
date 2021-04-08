@@ -111,11 +111,26 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
   }
 
   @Override
+  public Future<V> replace(K k, V v, long ttl) {
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] vv = DataConverter.toCachedObject(v);
+    return Future.fromCompletionStage(cache.replaceAsync(kk, vv, ttl, TimeUnit.MILLISECONDS), vertx.getOrCreateContext()).map(DataConverter::fromCachedObject);
+  }
+
+  @Override
   public Future<Boolean> replaceIfPresent(K k, V oldValue, V newValue) {
     byte[] kk = DataConverter.toCachedObject(k);
     byte[] oo = DataConverter.toCachedObject(oldValue);
     byte[] nn = DataConverter.toCachedObject(newValue);
     return Future.fromCompletionStage(cache.replaceAsync(kk, oo, nn), vertx.getOrCreateContext());
+  }
+
+  @Override
+  public Future<Boolean> replaceIfPresent(K k, V oldValue, V newValue, long ttl) {
+    byte[] kk = DataConverter.toCachedObject(k);
+    byte[] oo = DataConverter.toCachedObject(oldValue);
+    byte[] nn = DataConverter.toCachedObject(newValue);
+    return Future.fromCompletionStage(cache.replaceAsync(kk, oo, nn, ttl, TimeUnit.MILLISECONDS), vertx.getOrCreateContext());
   }
 
   @Override
