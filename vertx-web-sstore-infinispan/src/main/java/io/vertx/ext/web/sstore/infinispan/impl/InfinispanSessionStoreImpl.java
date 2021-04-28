@@ -33,7 +33,9 @@ import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
 import org.infinispan.client.hotrod.DefaultTemplate;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.configuration.ClientIntelligence;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
+import org.infinispan.client.hotrod.configuration.SaslQop;
 import org.infinispan.client.hotrod.configuration.ServerConfigurationBuilder;
 import org.infinispan.commons.api.CacheContainerAdmin;
 
@@ -93,11 +95,20 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
       builder
         .host(server.getString("host", "localhost"))
         .port(server.getInteger("port", DEFAULT_HOTROD_PORT));
+      String clientIntelligence = server.getString("clientIntelligence");
+      if (clientIntelligence != null) {
+        builder.clientIntelligence(ClientIntelligence.valueOf(clientIntelligence));
+      }
       builder.security().authentication()
         .username(Objects.requireNonNull(server.getString("username"), "username is required"))
         .password(Objects.requireNonNull(server.getString("password"), "password is required"))
         .realm(server.getString("realm", "default"))
         .saslMechanism(server.getString("saslMechanism", "DIGEST-MD5"));
+      String saslQop = server.getString("saslQop");
+      if (saslQop != null) {
+        builder.security().authentication()
+          .saslQop(SaslQop.valueOf(saslQop));
+      }
     }
   }
 
