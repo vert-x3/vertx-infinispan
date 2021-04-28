@@ -31,7 +31,7 @@
 
   <properties>
     <doc.skip>true</doc.skip>
-    <infinispan.version>12.0.2.Final</infinispan.version>
+    <infinispan.version>12.1.1.Final</infinispan.version>
   </properties>
 
   <modules>
