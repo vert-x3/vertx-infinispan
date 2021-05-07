@@ -30,9 +30,22 @@
   <packaging>pom</packaging>
 
   <properties>
+    <stack.version>4.1.0-SNAPSHOT</stack.version>
     <doc.skip>true</doc.skip>
     <infinispan.version>12.1.1.Final</infinispan.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-dependencies</artifactId>
+        <version>${stack.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <modules>
     <module>vertx-infinispan</module>
