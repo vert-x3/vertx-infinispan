@@ -21,6 +21,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.handler.SessionHandlerTestBase;
 import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
 import org.junit.ClassRule;
+import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
 
@@ -28,6 +29,7 @@ import static org.infinispan.client.hotrod.impl.ConfigurationProperties.DEFAULT_
 
 public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
 
+  private static final String IDENTITIES_PATH = "/user-config/identities.yaml";
   private static final String USER = "foo";
   private static final String PASS = "bar";
 
@@ -35,8 +37,8 @@ public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
   public static GenericContainer<?> container =
     new GenericContainer<>("infinispan/server:12.1")
       .withExposedPorts(DEFAULT_HOTROD_PORT)
-      .withEnv("USER", USER)
-      .withEnv("PASS", PASS)
+      .withClasspathResourceMapping("identities.yaml", "/user-config/identities.yaml", BindMode.READ_ONLY)
+      .withEnv("IDENTITIES_PATH", IDENTITIES_PATH)
       .waitingFor(new LogMessageWaitStrategy().withRegEx(".*Infinispan Server.*started in.*\\s"));
 
   @Override
