@@ -99,7 +99,7 @@
     <dependency>
       <groupId>io.reactivex.rxjava3</groupId>
       <artifactId>rxjava</artifactId>
-      <version>3.0.9</version>
+      <version>${rxjava3.version}</version>
       <exclusions>
         <exclusion>
           <groupId>io.reactivestreams</groupId>
