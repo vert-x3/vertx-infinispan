@@ -113,7 +113,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
       if (demand < 0L) {
         demand = Long.MAX_VALUE;
       }
-      if (dataHandler != null) {
+      if (dataHandler != null && iterable != null) {
         doRead();
       }
     }
