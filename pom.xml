@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2021 Red Hat, Inc.
+  ~ Copyright 2022 Red Hat, Inc.
   ~
   ~ Red Hat licenses this file to you under the Apache License, version 2.0
   ~ (the "License"); you may not use this file except in compliance with the
@@ -13,7 +13,9 @@
   ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
-  --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -30,7 +32,7 @@
     <stack.version>4.3.0-SNAPSHOT</stack.version>
     <doc.skip>true</doc.skip>
     <rxjava3.version>3.0.13</rxjava3.version>
-    <infinispan.version>12.1.7.Final</infinispan.version>
+    <infinispan.version>13.0.8.Final</infinispan.version>
   </properties>
 
   <dependencyManagement>
