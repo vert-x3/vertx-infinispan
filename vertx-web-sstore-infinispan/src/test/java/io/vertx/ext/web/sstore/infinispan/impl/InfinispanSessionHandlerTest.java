@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Red Hat, Inc.
+ * Copyright 2022 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -29,16 +29,16 @@ import static org.infinispan.client.hotrod.impl.ConfigurationProperties.DEFAULT_
 
 public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
 
-  private static final String IDENTITIES_PATH = "/user-config/identities.yaml";
+  private static final String IDENTITIES_BATCH = "/user-config/identities.batch";
   private static final String USER = "foo";
   private static final String PASS = "bar";
 
   @ClassRule
   public static GenericContainer<?> container =
-    new GenericContainer<>("infinispan/server:12.1")
+    new GenericContainer<>("infinispan/server:13.0.8.Final")
       .withExposedPorts(DEFAULT_HOTROD_PORT)
-      .withClasspathResourceMapping("identities.yaml", "/user-config/identities.yaml", BindMode.READ_ONLY)
-      .withEnv("IDENTITIES_PATH", IDENTITIES_PATH)
+      .withClasspathResourceMapping("identities.batch", "/user-config/identities.batch", BindMode.READ_ONLY)
+      .withEnv("IDENTITIES_BATCH", IDENTITIES_BATCH)
       .waitingFor(new LogMessageWaitStrategy().withRegEx(".*Infinispan Server.*started in.*\\s"));
 
   @Override
