@@ -137,7 +137,6 @@ public class InfinispanClusteredAsyncMapTest extends ClusteredAsyncMapTest {
           });
         }
       });
-      stream.fetch(1);
     });
     await();
   }
