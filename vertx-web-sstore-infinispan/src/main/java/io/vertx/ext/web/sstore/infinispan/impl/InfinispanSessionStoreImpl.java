@@ -16,9 +16,7 @@
 
 package io.vertx.ext.web.sstore.infinispan.impl;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.impl.VertxInternal;
@@ -128,47 +126,41 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
   }
 
   @Override
-  public void get(String id, Handler<AsyncResult<Session>> resultHandler) {
-    Future.fromCompletionStage(sessions.getAsync(id), vertx.getOrCreateContext())
-      .<Session>map(current -> {
-        SharedDataSessionImpl session;
-        if (current == null) {
-          session = null;
-        } else {
-          session = new SharedDataSessionImpl(random);
-          session.readFromBuffer(0, Buffer.buffer(current));
-        }
-        return session;
-      })
-      .onComplete(resultHandler);
+  public Future<Session> get(String id) {
+    return Future.fromCompletionStage(sessions.getAsync(id), vertx.getOrCreateContext()).map(current -> {
+      SharedDataSessionImpl session;
+      if (current == null) {
+        session = null;
+      } else {
+        session = new SharedDataSessionImpl(random);
+        session.readFromBuffer(0, Buffer.buffer(current));
+      }
+      return session;
+    });
   }
 
   @Override
-  public void delete(String id, Handler<AsyncResult<Void>> resultHandler) {
-    Future.fromCompletionStage(sessions.removeAsync(id), vertx.getOrCreateContext())
-      .<Void>mapEmpty()
-      .onComplete(resultHandler);
+  public Future<Void> delete(String id) {
+    return Future.fromCompletionStage(sessions.removeAsync(id), vertx.getOrCreateContext()).mapEmpty();
   }
 
   @Override
-  public void put(Session session, Handler<AsyncResult<Void>> resultHandler) {
-    Future.fromCompletionStage(sessions.getAsync(session.id()), vertx.getOrCreateContext())
-      .compose(current -> {
-        AbstractSession newSession = (AbstractSession) session;
-        if (current != null) {
-          // Old session exists, we need to validate versions
-          SharedDataSessionImpl oldSession = new SharedDataSessionImpl(random);
-          oldSession.readFromBuffer(0, Buffer.buffer(current));
+  public Future<Void> put(Session session) {
+    return Future.fromCompletionStage(sessions.getAsync(session.id()), vertx.getOrCreateContext()).compose(current -> {
+      AbstractSession newSession = (AbstractSession) session;
+      if (current != null) {
+        // Old session exists, we need to validate versions
+        SharedDataSessionImpl oldSession = new SharedDataSessionImpl(random);
+        oldSession.readFromBuffer(0, Buffer.buffer(current));
 
-          if (oldSession.version() != newSession.version()) {
-            return Future.failedFuture("Session version mismatch");
-          }
+        if (oldSession.version() != newSession.version()) {
+          return Future.failedFuture("Session version mismatch");
         }
+      }
 
-        newSession.incrementVersion();
-        return writeSession(newSession);
-      })
-      .onComplete(resultHandler);
+      newSession.incrementVersion();
+      return writeSession(newSession);
+    });
   }
 
   private Future<Void> writeSession(Session session) {
@@ -181,15 +173,14 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
   }
 
   @Override
-  public void clear(Handler<AsyncResult<Void>> resultHandler) {
-    Future.fromCompletionStage(sessions.clearAsync(), vertx.getOrCreateContext()).onComplete(resultHandler);
+  public Future<Void> clear() {
+    return Future.fromCompletionStage(sessions.clearAsync(), vertx.getOrCreateContext());
   }
 
   @Override
-  public void size(Handler<AsyncResult<Integer>> resultHandler) {
-    Future.fromCompletionStage(sessions.sizeAsync(), vertx.getOrCreateContext())
-      .map(val -> (int) Math.min(val, Integer.MAX_VALUE))
-      .onComplete(resultHandler);
+  public Future<Integer> size() {
+    return Future.fromCompletionStage(sessions.sizeAsync(), vertx.getOrCreateContext())
+      .map(val -> (int) Math.min(val, Integer.MAX_VALUE));
   }
 
   @Override
