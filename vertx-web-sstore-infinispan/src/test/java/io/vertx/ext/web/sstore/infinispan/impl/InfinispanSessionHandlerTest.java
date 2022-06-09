@@ -35,7 +35,7 @@ public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
 
   @ClassRule
   public static GenericContainer<?> container =
-    new GenericContainer<>("infinispan/server:13.0.8.Final")
+    new GenericContainer<>("infinispan/server:13.0.10.Final")
       .withExposedPorts(DEFAULT_HOTROD_PORT)
       .withClasspathResourceMapping("identities.batch", "/user-config/identities.batch", BindMode.READ_ONLY)
       .withEnv("IDENTITIES_BATCH", IDENTITIES_BATCH)
