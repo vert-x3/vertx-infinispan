@@ -30,7 +30,7 @@
     <stack.version>4.4.0-SNAPSHOT</stack.version>
     <doc.skip>true</doc.skip>
     <rxjava3.version>3.0.13</rxjava3.version>
-    <infinispan.version>13.0.12.Final</infinispan.version>
+    <infinispan.version>13.0.15.Final</infinispan.version>
   </properties>
 
   <dependencyManagement>
