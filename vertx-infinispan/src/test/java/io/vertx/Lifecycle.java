@@ -42,7 +42,7 @@ public class Lifecycle {
 
   private static final Logger log = LoggerFactory.getLogger(Lifecycle.class);
 
-  public static void closeClustered(List<Vertx> clustered) throws Exception {
+  public static void close(List<Vertx> clustered) throws Exception {
     for (Vertx vertx : clustered) {
       VertxInternal vertxInternal = (VertxInternal) vertx;
 
