@@ -77,7 +77,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
       close();
     } else {
       dataHandler = handler;
-      context.<CloseableIteratorCollection<I>>executeBlocking(fut -> fut.complete(iterableSupplier.get()), false, ar -> {
+      context.<CloseableIteratorCollection<I>>executeBlocking(fut -> fut.complete(iterableSupplier.get()), false).onComplete(ar -> {
         synchronized (this) {
           if (ar.succeeded()) {
             iterable = ar.result();
@@ -131,7 +131,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
     }
     readInProgress = true;
     if (iterator == null) {
-      context.<CloseableIterator<I>>executeBlocking(fut -> fut.complete(iterable.iterator()), false, ar -> {
+      context.<CloseableIterator<I>>executeBlocking(fut -> fut.complete(iterable.iterator()), false).onComplete(ar -> {
         synchronized (this) {
           readInProgress = false;
           if (ar.succeeded()) {
@@ -160,7 +160,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
         batch.add(iterator.next());
       }
       fut.complete(batch);
-    }, false, ar -> {
+    }, false).onComplete(ar -> {
       synchronized (this) {
         if (ar.succeeded()) {
           queue.addAll(ar.result());
@@ -217,6 +217,6 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
         iter.close();
       }
       fut.complete();
-    }, false, null);
+    }, false);
   }
 }
