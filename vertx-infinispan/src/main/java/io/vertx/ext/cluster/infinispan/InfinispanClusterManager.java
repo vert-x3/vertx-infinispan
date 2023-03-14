@@ -129,11 +129,11 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<AsyncMap<K, V>>executeBlocking(prom -> {
       EmbeddedCacheManagerAdmin administration = cacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE);
       Cache<byte[], byte[]> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
       prom.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   @Override
@@ -148,7 +148,7 @@ public class InfinispanClusterManager implements ClusterManager {
         lockManager.defineLock(name);
       }
       prom.complete(lockManager.get(name));
-    }, false, ar -> {
+    }, false).onComplete(ar -> {
       if (ar.succeeded()) {
         tryLock(ar.result(), name, timeout, promise);
       } else {
@@ -173,12 +173,12 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void getCounter(String name, Promise<Counter> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<Counter>executeBlocking(prom -> {
       if (!counterManager.isDefined(name)) {
         counterManager.defineCounter(name, CounterConfiguration.builder(CounterType.UNBOUNDED_STRONG).build());
       }
       prom.complete(new InfinispanCounter(vertx, counterManager.getStrongCounter(name).sync()));
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   @Override
@@ -227,7 +227,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void join(Promise<Void> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(prom -> {
       if (active) {
         prom.complete();
         return;
@@ -278,7 +278,7 @@ public class InfinispanClusterManager implements ClusterManager {
       } catch (Exception e) {
         prom.fail(e);
       }
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   private ClassLoader getCTCCL() {
@@ -287,7 +287,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void leave(Promise<Void> promise) {
-    vertx.executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(prom -> {
       if (!active) {
         prom.complete();
         return;
@@ -299,7 +299,7 @@ public class InfinispanClusterManager implements ClusterManager {
         cacheManager.stop();
       }
       prom.complete();
-    }, false, promise);
+    }, false).onComplete(promise);
   }
 
   @Override

@@ -79,8 +79,8 @@ public class ClusterHealthCheckTest extends VertxTestBase {
   public void testDetailedHealthCheck() {
     startNodes(2);
     ClusterHealthCheck healthCheck = ClusterHealthCheck.createProcedure(vertices[1], true);
-    vertices[0].sharedData().getAsyncMap("foo", onSuccess(asyncMap -> {
-      vertices[1].executeBlocking(healthCheck, onSuccess(status -> {
+    vertices[0].sharedData().getAsyncMap("foo").onComplete(onSuccess(asyncMap -> {
+      vertices[1].executeBlocking(healthCheck).onComplete(onSuccess(status -> {
         JsonObject json = new JsonObject(status.toJson().encode()); // test serialization+deserialization
         assertTrue(json.getBoolean("ok"));
         assertEquals(Integer.valueOf(2), json.getJsonObject("data").getJsonObject("clusterHealth").getInteger("numberOfNodes"));

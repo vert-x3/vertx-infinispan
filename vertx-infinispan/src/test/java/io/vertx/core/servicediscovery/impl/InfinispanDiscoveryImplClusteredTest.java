@@ -46,7 +46,7 @@ public class InfinispanDiscoveryImplClusteredTest extends DiscoveryImplTestBase 
 
     VertxOptions options = new VertxOptions()
       .setClusterManager(new InfinispanClusterManager());
-    Vertx.clusteredVertx(options, ar -> {
+    Vertx.clusteredVertx(options).onComplete(ar -> {
       vertx = ar.result();
     });
     await().until(() -> vertx != null);
