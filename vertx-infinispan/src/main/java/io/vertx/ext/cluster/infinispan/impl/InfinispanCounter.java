@@ -46,20 +46,8 @@ public class InfinispanCounter implements Counter {
   }
 
   @Override
-  public void get(Handler<AsyncResult<Long>> resultHandler) {
-    Objects.requireNonNull(resultHandler, "resultHandler");
-    get().onComplete(resultHandler);
-  }
-
-  @Override
   public Future<Long> incrementAndGet() {
     return addAndGet(1L);
-  }
-
-  @Override
-  public void incrementAndGet(Handler<AsyncResult<Long>> resultHandler) {
-    Objects.requireNonNull(resultHandler, "resultHandler");
-    addAndGet(1L, resultHandler);
   }
 
   @Override
@@ -68,20 +56,8 @@ public class InfinispanCounter implements Counter {
   }
 
   @Override
-  public void getAndIncrement(Handler<AsyncResult<Long>> resultHandler) {
-    Objects.requireNonNull(resultHandler, "resultHandler");
-    getAndAdd(1L, resultHandler);
-  }
-
-  @Override
   public Future<Long> decrementAndGet() {
     return addAndGet(-1L);
-  }
-
-  @Override
-  public void decrementAndGet(Handler<AsyncResult<Long>> resultHandler) {
-    Objects.requireNonNull(resultHandler, "resultHandler");
-    addAndGet(-1L, resultHandler);
   }
 
   @Override
@@ -92,12 +68,6 @@ public class InfinispanCounter implements Counter {
   }
 
   @Override
-  public void addAndGet(long value, Handler<AsyncResult<Long>> resultHandler) {
-    Objects.requireNonNull(resultHandler, "resultHandler");
-    addAndGet(value).onComplete(resultHandler);
-  }
-
-  @Override
   public Future<Long> getAndAdd(long value) {
     return vertx.executeBlocking(future -> {
       future.complete(strongCounter.addAndGet(value) - value);
@@ -105,21 +75,9 @@ public class InfinispanCounter implements Counter {
   }
 
   @Override
-  public void getAndAdd(long value, Handler<AsyncResult<Long>> resultHandler) {
-    Objects.requireNonNull(resultHandler, "resultHandler");
-    getAndAdd(value).onComplete(resultHandler);
-  }
-
-  @Override
   public Future<Boolean> compareAndSet(long expected, long value) {
     return vertx.executeBlocking(future -> {
       future.complete(strongCounter.compareAndSet(expected, value));
     }, false);
-  }
-
-  @Override
-  public void compareAndSet(long expected, long value, Handler<AsyncResult<Boolean>> resultHandler) {
-    Objects.requireNonNull(resultHandler, "resultHandler");
-    compareAndSet(expected, value).onComplete(resultHandler);
   }
 }
