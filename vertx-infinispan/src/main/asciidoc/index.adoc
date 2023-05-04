@@ -116,7 +116,6 @@ Notice that the custom Infinispan instance need to be configured with:
 == Packaging an executable uber JAR
 
 Infinispan uses Java's `ServiceLoader` mechanism to discover implementations of a few classes at runtime.
-
 You must configure your build tool to merge service descriptors files when creating an executable uber JAR (also known as "fat" JAR).
 
 If you use Maven and the Maven Shade Plugin, the plugin configuration should look like:
@@ -139,6 +138,13 @@ If you use Gradle and the Gradle Shadow Plugin:
 shadowJar {
   mergeServiceFiles()
 }
+----
+
+Besides, Infinispan relies on https://openjdk.org/jeps/238[Multi-Release JAR Files] to allow multiple, Java-release-specific versions of some classes.
+Consequently, the executable uber JAR's manifest file must contain the following entry:
+
+----
+Multi-Release: true
 ----
 
 == Configuring for Kubernetes
