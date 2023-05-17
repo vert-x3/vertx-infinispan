@@ -142,33 +142,24 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getLockWithTimeout(String name, long timeout, Promise<Lock> promise) {
-    vertx.<ClusteredLock>executeBlocking(prom -> {
+  public void getLockWithTimeout(String name, long timeout, Promise<Lock> prom) {
+    vertx.<Lock>executeBlocking(promise -> {
       if (!lockManager.isDefined(name)) {
         lockManager.defineLock(name);
       }
-      prom.complete(lockManager.get(name));
-    }, false, ar -> {
-      if (ar.succeeded()) {
-        tryLock(ar.result(), name, timeout, promise);
-      } else {
-        promise.fail(ar.cause());
-      }
-    });
-  }
-
-  private void tryLock(ClusteredLock lock, String name, long timeout, Promise<Lock> promise) {
-    lock.tryLock(timeout, TimeUnit.MILLISECONDS).whenComplete((locked, throwable) -> {
-      if (throwable == null) {
-        if (locked) {
-          promise.complete(new InfinispanLock(lock));
+      ClusteredLock lock = lockManager.get(name);
+      lock.tryLock(timeout, TimeUnit.MILLISECONDS).whenComplete((locked, throwable) -> {
+        if (throwable == null) {
+          if (locked) {
+            promise.complete(new InfinispanLock(lock));
+          } else {
+            promise.fail("Timed out waiting to get lock " + name);
+          }
         } else {
-          promise.fail("Timed out waiting to get lock " + name);
+          promise.fail(throwable);
         }
-      } else {
-        promise.fail(throwable);
-      }
-    });
+      });
+    }, false).onComplete(prom);
   }
 
   @Override
