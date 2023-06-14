@@ -17,7 +17,7 @@
 package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.shareddata.impl.ClusterSerializable;
+import io.vertx.core.shareddata.ClusterSerializable;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
