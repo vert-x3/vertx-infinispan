@@ -20,6 +20,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.impl.future.PromiseInternal;
 import io.vertx.core.impl.logging.Logger;
 import io.vertx.core.impl.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -129,10 +130,10 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
-    vertx.<AsyncMap<K, V>>executeBlocking(prom -> {
+    vertx.<AsyncMap<K, V>>executeBlocking(() -> {
       EmbeddedCacheManagerAdmin administration = cacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE);
       Cache<byte[], byte[]> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
-      prom.complete(new InfinispanAsyncMapImpl<>(vertx, cache));
+      return new InfinispanAsyncMapImpl<>(vertx, cache);
     }, false).onComplete(promise);
   }
 
@@ -143,7 +144,8 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void getLockWithTimeout(String name, long timeout, Promise<Lock> prom) {
-    vertx.<Lock>executeBlocking(promise -> {
+    vertx.executeBlocking(() -> {
+      PromiseInternal<Lock> promise = vertx.promise();
       if (!lockManager.isDefined(name)) {
         lockManager.defineLock(name);
       }
@@ -159,16 +161,17 @@ public class InfinispanClusterManager implements ClusterManager {
           promise.fail(throwable);
         }
       });
-    }, false).onComplete(prom);
+      return promise.future();
+    }, false).compose(f -> f).onComplete(prom);
   }
 
   @Override
   public void getCounter(String name, Promise<Counter> promise) {
-    vertx.<Counter>executeBlocking(prom -> {
+    vertx.<Counter>executeBlocking(() -> {
       if (!counterManager.isDefined(name)) {
         counterManager.defineCounter(name, CounterConfiguration.builder(CounterType.UNBOUNDED_STRONG).build());
       }
-      prom.complete(new InfinispanCounter(vertx, counterManager.getStrongCounter(name).sync()));
+      return new InfinispanCounter(vertx, counterManager.getStrongCounter(name).sync());
     }, false).onComplete(promise);
   }
 
@@ -218,57 +221,47 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void join(Promise<Void> promise) {
-    vertx.<Void>executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(() -> {
       if (active) {
-        prom.complete();
-        return;
+        return null;
       }
       active = true;
       if (!userProvidedCacheManager) {
-        try {
-          FileLookup fileLookup = FileLookupFactory.newInstance();
+        FileLookup fileLookup = FileLookupFactory.newInstance();
 
-          URL ispnConfig = fileLookup.lookupFileLocation(ispnConfigPath, getCTCCL());
-          if (ispnConfig == null) {
-            log.warn("Cannot find Infinispan config '" + ispnConfigPath + "', using default");
-            ispnConfig = fileLookup.lookupFileLocation(DEFAULT_INFINISPAN_XML, getCTCCL());
-          }
-          ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(ispnConfig);
-          // Workaround Launcher in fatjar issue (context classloader may be null)
-          ClassLoader classLoader = getCTCCL();
-          if (classLoader == null) {
-            classLoader = getClass().getClassLoader();
-          }
-          builderHolder.getGlobalConfigurationBuilder().classLoader(classLoader);
-
-          if (fileLookup.lookupFileLocation(jgroupsConfigPath, getCTCCL()) != null) {
-            log.warn("Forcing JGroups config to '" + jgroupsConfigPath + "'");
-            builderHolder.getGlobalConfigurationBuilder().transport().defaultTransport()
-              .removeProperty(JGroupsTransport.CHANNEL_CONFIGURATOR)
-              .addProperty(JGroupsTransport.CONFIGURATION_FILE, jgroupsConfigPath);
-          }
-
-          cacheManager = new DefaultCacheManager(builderHolder, true);
-        } catch (IOException e) {
-          prom.fail(e);
-          return;
+        URL ispnConfig = fileLookup.lookupFileLocation(ispnConfigPath, getCTCCL());
+        if (ispnConfig == null) {
+          log.warn("Cannot find Infinispan config '" + ispnConfigPath + "', using default");
+          ispnConfig = fileLookup.lookupFileLocation(DEFAULT_INFINISPAN_XML, getCTCCL());
         }
+        ConfigurationBuilderHolder builderHolder = new ParserRegistry().parse(ispnConfig);
+        // Workaround Launcher in fatjar issue (context classloader may be null)
+        ClassLoader classLoader = getCTCCL();
+        if (classLoader == null) {
+          classLoader = getClass().getClassLoader();
+        }
+        builderHolder.getGlobalConfigurationBuilder().classLoader(classLoader);
+
+        if (fileLookup.lookupFileLocation(jgroupsConfigPath, getCTCCL()) != null) {
+          log.warn("Forcing JGroups config to '" + jgroupsConfigPath + "'");
+          builderHolder.getGlobalConfigurationBuilder().transport().defaultTransport()
+            .removeProperty(JGroupsTransport.CHANNEL_CONFIGURATOR)
+            .addProperty(JGroupsTransport.CONFIGURATION_FILE, jgroupsConfigPath);
+        }
+
+        cacheManager = new DefaultCacheManager(builderHolder, true);
       }
       viewListener = new ClusterViewListener();
       cacheManager.addListener(viewListener);
-      try {
 
-        subsCacheHelper = new SubsCacheHelper(vertx, cacheManager, nodeSelector);
+      subsCacheHelper = new SubsCacheHelper(vertx, cacheManager, nodeSelector);
 
-        nodeInfoCache = cacheManager.<String, byte[]>getCache("__vertx.nodeInfo").getAdvancedCache();
+      nodeInfoCache = cacheManager.<String, byte[]>getCache("__vertx.nodeInfo").getAdvancedCache();
 
-        lockManager = (EmbeddedClusteredLockManager) EmbeddedClusteredLockManagerFactory.from(cacheManager);
-        counterManager = EmbeddedCounterManagerFactory.asCounterManager(cacheManager);
+      lockManager = (EmbeddedClusteredLockManager) EmbeddedClusteredLockManagerFactory.from(cacheManager);
+      counterManager = EmbeddedCounterManagerFactory.asCounterManager(cacheManager);
 
-        prom.complete();
-      } catch (Exception e) {
-        prom.fail(e);
-      }
+      return null;
     }, false).onComplete(promise);
   }
 
@@ -278,10 +271,9 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void leave(Promise<Void> promise) {
-    vertx.<Void>executeBlocking(prom -> {
+    vertx.<Void>executeBlocking(() -> {
       if (!active) {
-        prom.complete();
-        return;
+        return null;
       }
       active = false;
       subsCacheHelper.close();
@@ -289,7 +281,7 @@ public class InfinispanClusterManager implements ClusterManager {
       if (!userProvidedCacheManager) {
         cacheManager.stop();
       }
-      prom.complete();
+      return null;
     }, false).onComplete(promise);
   }
 

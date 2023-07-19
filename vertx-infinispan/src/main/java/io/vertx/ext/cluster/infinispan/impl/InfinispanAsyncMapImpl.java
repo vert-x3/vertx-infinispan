@@ -140,28 +140,28 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
 
   @Override
   public Future<Integer> size() {
-    return vertx.executeBlocking(future -> future.complete(cache.size()), false);
+    return vertx.executeBlocking(cache::size, false);
   }
 
   @Override
   public Future<Set<K>> keys() {
-    return vertx.executeBlocking(promise -> {
+    return vertx.executeBlocking(() -> {
       Set<byte[]> cacheKeys = cache.keySet().stream().collect(CacheCollectors.serializableCollector(Collectors::toSet));
-      promise.complete(cacheKeys.stream().<K>map(DataConverter::fromCachedObject).collect(toSet()));
+      return cacheKeys.stream().<K>map(DataConverter::fromCachedObject).collect(toSet());
     }, false);
   }
 
   @Override
   public Future<List<V>> values() {
-    return vertx.executeBlocking(promise -> {
+    return vertx.executeBlocking(() -> {
       List<byte[]> cacheValues = cache.values().stream().collect(CacheCollectors.serializableCollector(Collectors::toList));
-      promise.complete(cacheValues.stream().<V>map(DataConverter::fromCachedObject).collect(toList()));
+      return cacheValues.stream().<V>map(DataConverter::fromCachedObject).collect(toList());
     }, false);
   }
 
   @Override
   public Future<Map<K, V>> entries() {
-    return vertx.executeBlocking(promise -> {
+    return vertx.executeBlocking(() -> {
       Map<byte[], byte[]> cacheEntries = cache.entrySet().stream()
         .collect(CacheCollectors.serializableCollector(() -> toMap(Entry::getKey, Entry::getValue)));
       Map<K, V> result = new HashMap<>();
@@ -170,7 +170,7 @@ public class InfinispanAsyncMapImpl<K, V> implements AsyncMap<K, V>, InfinispanA
         V v = DataConverter.fromCachedObject(entry.getValue());
         result.put(k, v);
       }
-      promise.complete(result);
+      return result;
     }, false);
   }
 

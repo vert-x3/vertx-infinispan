@@ -20,6 +20,7 @@ import io.vertx.Lifecycle;
 import io.vertx.core.*;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.test.core.VertxTestBase;
 import org.junit.Rule;
 import org.junit.Test;
@@ -80,7 +81,11 @@ public class ClusterHealthCheckTest extends VertxTestBase {
     startNodes(2);
     ClusterHealthCheck healthCheck = ClusterHealthCheck.createProcedure(vertices[1], true);
     vertices[0].sharedData().getAsyncMap("foo").onComplete(onSuccess(asyncMap -> {
-      vertices[1].executeBlocking(healthCheck).onComplete(onSuccess(status -> {
+      vertices[1].executeBlocking(() -> {
+        Promise<Status> promise = Promise.promise();
+        healthCheck.handle(promise);
+        return promise.future().toCompletionStage().toCompletableFuture().get();
+      }).onComplete(onSuccess(status -> {
         JsonObject json = new JsonObject(status.toJson().encode()); // test serialization+deserialization
         assertTrue(json.getBoolean("ok"));
         assertEquals(Integer.valueOf(2), json.getJsonObject("data").getJsonObject("clusterHealth").getInteger("numberOfNodes"));

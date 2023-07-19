@@ -77,7 +77,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
       close();
     } else {
       dataHandler = handler;
-      context.<CloseableIteratorCollection<I>>executeBlocking(fut -> fut.complete(iterableSupplier.get()), false).onComplete(ar -> {
+      context.<CloseableIteratorCollection<I>>executeBlocking(iterableSupplier::get, false).onComplete(ar -> {
         synchronized (this) {
           if (ar.succeeded()) {
             iterable = ar.result();
@@ -131,7 +131,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
     }
     readInProgress = true;
     if (iterator == null) {
-      context.<CloseableIterator<I>>executeBlocking(fut -> fut.complete(iterable.iterator()), false).onComplete(ar -> {
+      context.<CloseableIterator<I>>executeBlocking(() -> iterable.iterator(), false).onComplete(ar -> {
         synchronized (this) {
           readInProgress = false;
           if (ar.succeeded()) {
@@ -154,12 +154,12 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
       context.runOnContext(v -> emitQueued());
       return;
     }
-    context.<List<I>>executeBlocking(fut -> {
+    context.<List<I>>executeBlocking(() -> {
       List<I> batch = new ArrayList<>(BATCH_SIZE);
       for (int i = 0; i < BATCH_SIZE && iterator.hasNext(); i++) {
         batch.add(iterator.next());
       }
-      fut.complete(batch);
+      return batch;
     }, false).onComplete(ar -> {
       synchronized (this) {
         if (ar.succeeded()) {
@@ -208,7 +208,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
   private void close() {
     closed = true;
     AtomicReference<CloseableIterator<I>> iteratorRef = new AtomicReference<>();
-    context.executeBlocking(fut -> {
+    context.executeBlocking(() -> {
       synchronized (this) {
         iteratorRef.set(iterator);
       }
@@ -216,7 +216,7 @@ public class CloseableIteratorCollectionStream<I, O> implements ReadStream<O> {
       if (iter != null) {
         iter.close();
       }
-      fut.complete();
+      return null;
     }, false);
   }
 }

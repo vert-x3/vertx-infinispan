@@ -40,9 +40,7 @@ public class InfinispanCounter implements Counter {
 
   @Override
   public Future<Long> get() {
-    return vertx.executeBlocking(future -> {
-      future.complete(strongCounter.getValue());
-    }, false);
+    return vertx.executeBlocking(strongCounter::getValue, false);
   }
 
   @Override
@@ -62,22 +60,16 @@ public class InfinispanCounter implements Counter {
 
   @Override
   public Future<Long> addAndGet(long value) {
-    return vertx.executeBlocking(future -> {
-      future.complete(strongCounter.addAndGet(value));
-    }, false);
+    return vertx.executeBlocking(() -> strongCounter.addAndGet(value), false);
   }
 
   @Override
   public Future<Long> getAndAdd(long value) {
-    return vertx.executeBlocking(future -> {
-      future.complete(strongCounter.addAndGet(value) - value);
-    }, false);
+    return vertx.executeBlocking(() -> strongCounter.addAndGet(value) - value, false);
   }
 
   @Override
   public Future<Boolean> compareAndSet(long expected, long value) {
-    return vertx.executeBlocking(future -> {
-      future.complete(strongCounter.compareAndSet(expected, value));
-    }, false);
+    return vertx.executeBlocking(() -> strongCounter.compareAndSet(expected, value), false);
   }
 }
