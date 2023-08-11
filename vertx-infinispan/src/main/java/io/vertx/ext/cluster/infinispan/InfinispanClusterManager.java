@@ -33,6 +33,7 @@ import org.infinispan.commons.api.BasicCacheContainer;
 import org.infinispan.commons.api.CacheContainerAdmin;
 import org.infinispan.commons.util.FileLookup;
 import org.infinispan.commons.util.FileLookupFactory;
+import org.infinispan.commons.util.Version;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
 import org.infinispan.context.Flag;
@@ -72,11 +73,12 @@ public class InfinispanClusterManager implements ClusterManager {
 
   private static final Logger log = LoggerFactory.getLogger(InfinispanClusterManager.class);
 
+  private static final boolean isISPN13 =  "13".equals(Version.getMajor());
   private static final String VERTX_INFINISPAN_CONFIG_PROP_NAME = "vertx.infinispan.config";
   private static final String INFINISPAN_XML = "infinispan.xml";
-  private static final String DEFAULT_INFINISPAN_XML = "default-infinispan.xml";
+  private static final String DEFAULT_INFINISPAN_XML = isISPN13 ? "default-infinispan.xml" : "default-infinispan-14.xml";
   private static final String VERTX_JGROUPS_CONFIG_PROP_NAME = "vertx.jgroups.config";
-  private static final String JGROUPS_XML = "jgroups.xml";
+  private static final String JGROUPS_XML = isISPN13 ? "jgroups.xml" : "jgroups-5.xml";
 
   private final String ispnConfigPath;
   private final String jgroupsConfigPath;
@@ -119,6 +121,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public void init(Vertx vertx, NodeSelector nodeSelector) {
+    log.info("Cluster Manager is using Infinispan " + Version.getVersion());
     this.vertx = (VertxInternal) vertx;
     this.nodeSelector = nodeSelector;
   }
