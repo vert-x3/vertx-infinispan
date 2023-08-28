@@ -43,7 +43,7 @@
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-core</artifactId>
+      <artifactId>infinispan-core${infinispan.jakartasuffix}</artifactId>
       <version>${infinispan.version}</version>
       <exclusions>
         <exclusion>
@@ -67,7 +67,7 @@
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-multimap</artifactId>
+      <artifactId>infinispan-multimap${infinispan.jakartasuffix}</artifactId>
       <version>${infinispan.version}</version>
     </dependency>
     <!-- Same version as Camel 3 -->
@@ -92,10 +92,27 @@
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-clustered-lock</artifactId>
       <version>${infinispan.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.infinispan</groupId>
+          <artifactId>infinispan-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-clustered-counter</artifactId>
+      <version>${infinispan.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.infinispan</groupId>
+          <artifactId>infinispan-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-component-annotations</artifactId>
       <version>${infinispan.version}</version>
     </dependency>
     <!-- Same version as vertx-rx-java3 -->
@@ -271,6 +288,19 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>ISPN-14</id>
+      <properties>
+        <infinispan.version>14.0.14.Final</infinispan.version>
+      </properties>
+    </profile>
+    <profile>
+      <id>ISPN-14-jakarta</id>
+      <properties>
+        <infinispan.version>14.0.14.Final</infinispan.version>
+        <infinispan.jakartasuffix>-jakarta</infinispan.jakartasuffix>
+      </properties>
+    </profile>
     <profile>
       <id>coverage</id>
       <build>

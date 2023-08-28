@@ -73,3 +73,91 @@ For advanced configuration requirements, you can provide a custom https://docs.j
 {@link examples.Examples#customClient}
 ----
 
+== Using a different Infinispan version
+
+Switching the version to Infinispan 14 or Infinispan 14 Jakarta requires Java 11.
+
+=== Switch to Infinispan 14
+
+In order to use Infinispan 14 you need to upgrade all Infinispan related packages.
+
+Maven:
+----
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.infinispan</groupId>
+        <artifactId>infinispan-bom</artifactId>
+        <version>14.0.14.Final</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+----
+
+Gradle:
+----
+configurations.all {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.infinispan') {
+            details.useVersion '14.0.14.Final'
+        }
+    }
+}
+----
+
+=== Switch to Infinispan 14 Jakarta
+
+In order to use Infinispan 14 you need to upgrade all Infinispan related packages and replace some jakarta specific artifacts.
+
+Maven:
+----
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.infinispan</groupId>
+        <artifactId>infinispan-bom</artifactId>
+        <version>14.0.14.Final</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-client-hotrod-jakarta</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web-sstore-infinispan</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.infinispan</groupId>
+          <artifactId>infinispan-client-hotrod</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+----
+
+Gradle:
+----
+configurations.all {
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'org.infinispan') {
+            details.useVersion '14.0.14.Final'
+        }
+    }
+}
+
+dependencies {
+    implementation (group: '${maven.groupId}', name: '${maven.artifactId}', version: '${maven.version}') {
+        exclude group: 'org.infinispan', module: 'infinispan-client-hotrod'
+    }
+
+    implementation group: 'org.infinispan', name: 'infinispan-client-hotrod-jakarta', version: '14.0.14.Final'
+}
+----

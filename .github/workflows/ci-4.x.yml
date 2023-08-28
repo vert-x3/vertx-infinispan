@@ -33,6 +33,24 @@ jobs:
         with:
           name: heap-dump
           path: target/*.hprof
+  Test-ISPN14:
+    name: Run tests
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+        jdk: [ 11 ]
+        profile: [ISPN-14, ISPN-14-jakarta]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: ${{ matrix.jdk }}
+          distribution: temurin
+      - name: Run tests
+        run: mvn -P ${{ matrix.profile }} -s .github/maven-ci-settings.xml -B -DtestLogLevel=OFF test
   Deploy:
     name: Deploy to OSSRH
     if: ${{ github.repository_owner == 'vert-x3' && (github.event_name == 'push' || github.event_name == 'schedule') }}

@@ -19,6 +19,7 @@ package io.vertx.core.eventbus;
 import io.vertx.core.*;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
+import org.infinispan.commons.util.Version;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
@@ -68,11 +69,12 @@ public class InfinispanFaultToleranceTest extends FaultToleranceTest {
 
   @Override
   protected List<String> getExternalNodeSystemProperties() {
+    String jgroupsVersion = Version.getMajor().equals(13) ? "" : "-5";
     return Arrays.asList(
       "-Djava.net.preferIPv4Stack=true",
       "-Djgroups.join_timeout=1000",
       "-Dvertx.infinispan.config=infinispan.xml",
-      "-Dvertx.jgroups.config=jgroups.xml",
+      "-Dvertx.jgroups.config=jgroups"+ jgroupsVersion + ".xml",
       "-Djgroups.file.location=" + System.getProperty("jgroups.file.location"),
       "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory"
     );
