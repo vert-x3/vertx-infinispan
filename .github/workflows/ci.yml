@@ -11,6 +11,9 @@ on:
       os:
         default: ubuntu-latest
         type: string
+      profile:
+        default: ISPN-13
+        type: string
 jobs:
   Test:
     name: Run tests
@@ -32,3 +35,17 @@ jobs:
         with:
           name: heap-dump
           path: target/*.hprof
+  Test-ISPN14:
+    if: ${{ startsWith(github.event.inputs.profile, 'ISPN-14') }}
+    name: Run tests
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: ${{ inputs.jdk }}
+          distribution: temurin
+      - name: Run tests
+        run: mvn -P ${{ inputs.profile }} -s .github/maven-ci-settings.xml -B -DtestLogLevel=OFF test

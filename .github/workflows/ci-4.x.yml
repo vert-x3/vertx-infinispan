@@ -6,9 +6,16 @@ jobs:
   CI:
     strategy:
       matrix:
-        include:
-          - os: ubuntu-latest
-            jdk: 8
+        os: [ubuntu-latest]
+        jdk: [8,11]
+        profile: [ISPN-13, ISPN-14, ISPN-14-jakarta]
+        exclude:
+          - jdk: 8
+            profile: ISPN-14
+          - jdk: 8
+            profile: ISPN-14-jakarta
+          - jdk: 11
+            profile: ISPN-13
     uses: ./.github/workflows/ci.yml
     with:
       branch: 4.x
