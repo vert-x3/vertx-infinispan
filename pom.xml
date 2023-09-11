@@ -30,7 +30,7 @@
     <stack.version>5.0.0-SNAPSHOT</stack.version>
     <doc.skip>true</doc.skip>
     <rxjava3.version>3.0.13</rxjava3.version>
-    <infinispan.version>13.0.17.Final</infinispan.version>
+    <infinispan.version>14.0.16.Final</infinispan.version>
   </properties>
 
   <dependencyManagement>
