@@ -36,7 +36,7 @@ jobs:
           name: heap-dump
           path: target/*.hprof
   Test-ISPN14:
-    if: ${{ startsWith(github.event.inputs.profile, 'ISPN-14') }}
+    if: ${{ startsWith(github.event.inputs.profile, 'ISPN-14') && github.event.inputs.branch == '4.x' }}
     name: Run tests
     runs-on: ${{ inputs.os }}
     steps:
