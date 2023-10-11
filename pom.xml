@@ -23,11 +23,11 @@
   </parent>
 
   <artifactId>vertx-infinispan-parent</artifactId>
-  <version>4.4.6-SNAPSHOT</version>
+  <version>4.4.6</version>
   <packaging>pom</packaging>
 
   <properties>
-    <stack.version>4.4.6-SNAPSHOT</stack.version>
+    <stack.version>4.4.6</stack.version>
     <doc.skip>true</doc.skip>
     <rxjava3.version>3.0.13</rxjava3.version>
     <infinispan.version>13.0.17.Final</infinispan.version>
