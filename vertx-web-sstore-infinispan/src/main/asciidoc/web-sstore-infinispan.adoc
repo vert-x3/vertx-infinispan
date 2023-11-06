@@ -2,8 +2,6 @@
 
 An implementation of {@link io.vertx.ext.web.sstore.SessionStore} that relies on the https://infinispan.org/[Infinispan] Java Client.
 
-WARNING: This module has _Tech Preview_ status, this means the API can change between versions.
-
 == Getting started
 
 To use this module, add the following to the _dependencies_ section of your Maven POM file:
