@@ -40,13 +40,13 @@
     <profile>
       <id>ISPN-14</id>
       <properties>
-        <infinispan.version>14.0.14.Final</infinispan.version>
+        <infinispan.version>14.0.20.Final</infinispan.version>
       </properties>
     </profile>
     <profile>
       <id>ISPN-14-jakarta</id>
       <properties>
-        <infinispan.version>14.0.14.Final</infinispan.version>
+        <infinispan.version>14.0.20.Final</infinispan.version>
         <infinispan.jakartasuffix>-jakarta</infinispan.jakartasuffix>
       </properties>
     </profile>
