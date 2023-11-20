@@ -42,9 +42,9 @@ public class Examples {
   public void createClusterManagerProgramatically() {
     ClusterManager mgr = new InfinispanClusterManager();
 
-    VertxOptions options = new VertxOptions().setClusterManager(mgr);
-
-    Vertx.clusteredVertx(options).onComplete(res -> {
+    Vertx.builder()
+      .withClusterManager(mgr)
+      .buildClustered().onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {
@@ -56,9 +56,9 @@ public class Examples {
   public void useExistingCacheManager(DefaultCacheManager cacheManager) {
     ClusterManager mgr = new InfinispanClusterManager(cacheManager);
 
-    VertxOptions options = new VertxOptions().setClusterManager(mgr);
-
-    Vertx.clusteredVertx(options).onComplete(res -> {
+    Vertx.builder()
+      .withClusterManager(mgr)
+      .buildClustered().onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
       } else {

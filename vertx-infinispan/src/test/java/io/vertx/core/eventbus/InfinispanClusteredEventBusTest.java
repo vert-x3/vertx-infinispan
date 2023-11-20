@@ -46,11 +46,11 @@ public class InfinispanClusteredEventBusTest extends ClusteredEventBusTest {
   }
 
   @Override
-  protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
+  protected void clusteredVertx(VertxOptions options, ClusterManager clusterManager, Handler<AsyncResult<Vertx>> ar) {
     CountDownLatch latch = new CountDownLatch(1);
     Promise<Vertx> promise = Promise.promise();
     promise.future().onComplete(ar);
-    super.clusteredVertx(options, asyncResult -> {
+    super.clusteredVertx(options, clusterManager, asyncResult -> {
       if (asyncResult.succeeded()) {
         promise.complete(asyncResult.result());
       } else {

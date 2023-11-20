@@ -44,9 +44,7 @@ public class InfinispanDiscoveryImplClusteredTest extends DiscoveryImplTestBase 
   public void setUp() throws Exception {
     System.setProperty("jgroups.file.location", temporaryFolder.newFolder().getAbsolutePath());
 
-    VertxOptions options = new VertxOptions()
-      .setClusterManager(new InfinispanClusterManager());
-    Vertx.clusteredVertx(options).onComplete(ar -> {
+    Vertx.builder().withClusterManager(new InfinispanClusterManager()).buildClustered().onComplete(ar -> {
       vertx = ar.result();
     });
     await().until(() -> vertx != null);
