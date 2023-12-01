@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Red Hat, Inc.
+ * Copyright 2023 Red Hat, Inc.
  *
  * Red Hat licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -41,18 +41,14 @@ public class InfinispanComplexHATest extends ComplexHATest {
   }
 
   @Override
-  protected void clusteredVertx(VertxOptions options, Handler<AsyncResult<Vertx>> ar) {
+  protected void clusteredVertx(VertxOptions options, ClusterManager clusterManager, Handler<AsyncResult<Vertx>> handler) {
     CountDownLatch latch = new CountDownLatch(1);
     Promise<Vertx> promise = Promise.promise();
-    promise.future().onComplete(ar);
-    super.clusteredVertx(options, asyncResult -> {
-      if (asyncResult.succeeded()) {
-        promise.complete(asyncResult.result());
-      } else {
-        promise.fail(asyncResult.cause());
-      }
+    promise.future().onComplete(ar -> {
+      handler.handle(ar);
       latch.countDown();
     });
+    super.clusteredVertx(options, clusterManager, promise);
     try {
       assertTrue(latch.await(2, TimeUnit.MINUTES));
     } catch (InterruptedException e) {
