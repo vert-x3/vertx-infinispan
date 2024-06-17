@@ -18,8 +18,8 @@
 
   <parent>
     <groupId>io.vertx</groupId>
-    <artifactId>vertx-ext-parent</artifactId>
-    <version>38</version>
+    <artifactId>vertx5-parent</artifactId>
+    <version>3</version>
   </parent>
 
   <artifactId>vertx-infinispan-parent</artifactId>
@@ -28,7 +28,6 @@
 
   <properties>
     <stack.version>5.0.0-SNAPSHOT</stack.version>
-    <doc.skip>true</doc.skip>
     <rxjava3.version>3.0.13</rxjava3.version>
     <infinispan.version>14.0.25.Final</infinispan.version>
   </properties>
@@ -54,21 +53,41 @@
     <pluginManagement>
       <plugins>
         <plugin>
-          <groupId>org.bsc.maven</groupId>
-          <artifactId>maven-processor-plugin</artifactId>
+          <artifactId>maven-compiler-plugin</artifactId>
           <executions>
             <execution>
-              <id>generate-sources</id>
+              <id>default-compile</id>
+              <phase>compile</phase>
               <configuration>
-                <optionMap>
-                  <infinispan.version>${infinispan.version}</infinispan.version>
-                </optionMap>
+                <annotationProcessors>
+                  <annotationProcessor>io.vertx.docgen.JavaDocGenProcessor</annotationProcessor>
+                </annotationProcessors>
+                <compilerArgs>
+                  <compilerArg>-Adocgen.source=${asciidoc.dir}</compilerArg>
+                  <compilerArg>-Adocgen.output=${project.build.directory}/asciidoc/java</compilerArg>
+                  <compilerArg>-Amaven.groupId=${project.groupId}</compilerArg>
+                  <compilerArg>-Amaven.artifactId=${project.artifactId}</compilerArg>
+                  <compilerArg>-Amaven.version=${project.version}</compilerArg>
+                  <compilerArg>-Ainfinispan.version=${infinispan.version}</compilerArg>
+                </compilerArgs>
               </configuration>
             </execution>
           </executions>
         </plugin>
       </plugins>
     </pluginManagement>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>package-docs</id>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
-
 </project>
