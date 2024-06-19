@@ -16,7 +16,7 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
-import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.internal.VertxInternal;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;

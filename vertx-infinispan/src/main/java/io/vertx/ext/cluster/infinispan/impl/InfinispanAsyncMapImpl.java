@@ -17,7 +17,7 @@
 package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.Future;
-import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.internal.VertxInternal;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.cluster.infinispan.InfinispanAsyncMap;
