@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanHATest extends HATest {
+public class InfinispanHATest extends io.vertx.tests.ha.HATest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

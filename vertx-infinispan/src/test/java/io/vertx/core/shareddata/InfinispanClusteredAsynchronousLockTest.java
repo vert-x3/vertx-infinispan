@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanClusteredAsynchronousLockTest extends ClusteredAsynchronousLockTest {
+public class InfinispanClusteredAsynchronousLockTest extends io.vertx.tests.shareddata.ClusteredAsynchronousLockTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

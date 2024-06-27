@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanComplexHATest extends ComplexHATest {
+public class InfinispanComplexHATest extends io.vertx.tests.ha.ComplexHATest {
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();

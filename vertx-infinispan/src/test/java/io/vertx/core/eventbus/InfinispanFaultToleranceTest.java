@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanFaultToleranceTest extends FaultToleranceTest {
+public class InfinispanFaultToleranceTest extends io.vertx.tests.eventbus.FaultToleranceTest {
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();

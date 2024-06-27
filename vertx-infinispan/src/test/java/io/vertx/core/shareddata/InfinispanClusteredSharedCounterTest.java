@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanClusteredSharedCounterTest extends ClusteredSharedCounterTest {
+public class InfinispanClusteredSharedCounterTest extends io.vertx.tests.shareddata.ClusteredSharedCounterTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

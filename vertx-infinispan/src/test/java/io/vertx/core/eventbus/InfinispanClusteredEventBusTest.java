@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanClusteredEventBusTest extends ClusteredEventBusTest {
+public class InfinispanClusteredEventBusTest extends io.vertx.tests.eventbus.ClusteredEventBusTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

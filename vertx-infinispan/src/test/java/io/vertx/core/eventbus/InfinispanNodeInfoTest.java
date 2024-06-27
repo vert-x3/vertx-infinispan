@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanNodeInfoTest extends NodeInfoTest {
+public class InfinispanNodeInfoTest extends io.vertx.tests.eventbus.NodeInfoTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();

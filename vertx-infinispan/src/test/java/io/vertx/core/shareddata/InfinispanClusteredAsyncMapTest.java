@@ -43,7 +43,7 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 /**
  * @author Thomas Segismont
  */
-public class InfinispanClusteredAsyncMapTest extends ClusteredAsyncMapTest {
+public class InfinispanClusteredAsyncMapTest extends io.vertx.tests.shareddata.ClusteredAsyncMapTest {
 
   @Rule
   public LoggingTestWatcher watchman = new LoggingTestWatcher();
