@@ -14,62 +14,107 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-
-  <parent>
-    <groupId>io.vertx</groupId>
-    <artifactId>vertx-ext-parent</artifactId>
-    <version>38</version>
-  </parent>
-
-  <artifactId>vertx-infinispan-parent</artifactId>
-  <version>4.5.10-SNAPSHOT</version>
-  <packaging>pom</packaging>
-
-  <properties>
-    <stack.version>4.5.10-SNAPSHOT</stack.version>
-    <doc.skip>true</doc.skip>
-    <rxjava3.version>3.0.13</rxjava3.version>
-    <infinispan.version>13.0.17.Final</infinispan.version>
-    <infinispan.jakartasuffix/>
-  </properties>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
+      
+    <modelVersion>4.0.0</modelVersion>
+      
+    <parent>
+            
         <groupId>io.vertx</groupId>
-        <artifactId>vertx-dependencies</artifactId>
-        <version>${stack.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
-  <modules>
-    <module>vertx-infinispan</module>
-    <module>vertx-web-sstore-infinispan</module>
-  </modules>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.bsc.maven</groupId>
-          <artifactId>maven-processor-plugin</artifactId>
-          <executions>
-            <execution>
-              <id>generate-sources</id>
-              <configuration>
-                <optionMap>
-                  <infinispan.version>${infinispan.version}</infinispan.version>
-                </optionMap>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
-
+            
+        <artifactId>vertx-ext-parent</artifactId>
+            
+        <version>38</version>
+          
+    </parent>
+      
+    <artifactId>vertx-infinispan-parent</artifactId>
+      
+    <version>4.5.10</version>
+      
+    <packaging>pom</packaging>
+      
+    <properties>
+            
+        <stack.version>4.5.10</stack.version>
+            
+        <doc.skip>true</doc.skip>
+            
+        <rxjava3.version>3.0.13</rxjava3.version>
+            
+        <infinispan.version>13.0.17.Final</infinispan.version>
+            
+        <infinispan.jakartasuffix/>
+          
+    </properties>
+      
+    <dependencyManagement>
+            
+        <dependencies>
+                  
+            <dependency>
+                        
+                <groupId>io.vertx</groupId>
+                        
+                <artifactId>vertx-dependencies</artifactId>
+                        
+                <version>${stack.version}</version>
+                        
+                <type>pom</type>
+                        
+                <scope>import</scope>
+                      
+            </dependency>
+                
+        </dependencies>
+          
+    </dependencyManagement>
+      
+    <modules>
+            
+        <module>vertx-infinispan</module>
+            
+        <module>vertx-web-sstore-infinispan</module>
+          
+    </modules>
+      
+    <build>
+            
+        <pluginManagement>
+                  
+            <plugins>
+                        
+                <plugin>
+                              
+                    <groupId>org.bsc.maven</groupId>
+                              
+                    <artifactId>maven-processor-plugin</artifactId>
+                              
+                    <executions>
+                                    
+                        <execution>
+                                          
+                            <id>generate-sources</id>
+                                          
+                            <configuration>
+                                                
+                                <optionMap>
+                                                      
+                                    <infinispan.version>${infinispan.version}</infinispan.version>
+                                                    
+                                </optionMap>
+                                              
+                            </configuration>
+                                        
+                        </execution>
+                                  
+                    </executions>
+                            
+                </plugin>
+                      
+            </plugins>
+                
+        </pluginManagement>
+          
+    </build>
+    
 </project>
