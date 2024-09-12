@@ -45,19 +45,14 @@ public class InfinispanHATest extends io.vertx.tests.ha.HATest {
   }
 
   @Override
-  protected void clusteredVertx(VertxOptions options, ClusterManager clusterManager, Handler<AsyncResult<Vertx>> handler) {
-    CountDownLatch latch = new CountDownLatch(1);
-    Promise<Vertx> promise = Promise.promise();
-    promise.future().onComplete(ar -> {
-      handler.handle(ar);
-      latch.countDown();
-    });
-    super.clusteredVertx(options, clusterManager, promise);
+  protected Future<Vertx> clusteredVertx(VertxOptions options, ClusterManager clusterManager) {
+    Future<Vertx> ret = super.clusteredVertx(options, clusterManager);
     try {
-      assertTrue(latch.await(2, TimeUnit.MINUTES));
-    } catch (InterruptedException e) {
+      ret.await(2, TimeUnit.MINUTES);
+    } catch (Exception e) {
       fail(e.getMessage());
     }
+    return ret;
   }
 
   @Override
