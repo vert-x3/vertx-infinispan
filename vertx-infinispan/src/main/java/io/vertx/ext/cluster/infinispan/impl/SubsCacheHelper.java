@@ -19,8 +19,8 @@ package io.vertx.ext.cluster.infinispan.impl;
 import io.vertx.core.internal.VertxInternal;
 import io.vertx.core.internal.logging.Logger;
 import io.vertx.core.internal.logging.LoggerFactory;
-import io.vertx.core.spi.cluster.NodeSelector;
 import io.vertx.core.spi.cluster.RegistrationInfo;
+import io.vertx.core.spi.cluster.RegistrationListener;
 import io.vertx.core.spi.cluster.RegistrationUpdateEvent;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.metadata.Metadata;
@@ -60,12 +60,12 @@ public class SubsCacheHelper {
   private final VertxInternal vertx;
   private final Throttling throttling;
   private final EmbeddedMultimapCache<String, byte[]> subsCache;
-  private final NodeSelector nodeSelector;
+  private final RegistrationListener nodeSelector;
   private final EntryListener entryListener;
 
   private final ConcurrentMap<String, Set<RegistrationInfo>> localSubs = new ConcurrentHashMap<>();
 
-  public SubsCacheHelper(VertxInternal vertx, DefaultCacheManager cacheManager, NodeSelector nodeSelector) {
+  public SubsCacheHelper(VertxInternal vertx, DefaultCacheManager cacheManager, RegistrationListener nodeSelector) {
     this.vertx = vertx;
     throttling = new Throttling(vertx, this::getAndUpdate);
     @SuppressWarnings("unchecked")

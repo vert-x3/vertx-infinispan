@@ -55,7 +55,6 @@ import org.infinispan.remoting.transport.Address;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.jgroups.stack.Protocol;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URL;
 import java.util.ArrayList;
@@ -84,8 +83,8 @@ public class InfinispanClusterManager implements ClusterManager {
   private final boolean userProvidedCacheManager;
 
   private VertxInternal vertx;
-  private NodeSelector nodeSelector;
   private DefaultCacheManager cacheManager;
+  private RegistrationListener registrationListener;
   private NodeListener nodeListener;
   private EmbeddedClusteredLockManager lockManager;
   private CounterManager counterManager;
@@ -119,9 +118,9 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void init(Vertx vertx, NodeSelector nodeSelector) {
+  public void init(Vertx vertx) {
     this.vertx = (VertxInternal) vertx;
-    this.nodeSelector = nodeSelector;
+    this.registrationListener = registrationListener;
   }
 
   public BasicCacheContainer getCacheContainer() {
@@ -183,6 +182,11 @@ public class InfinispanClusterManager implements ClusterManager {
   @Override
   public List<String> getNodes() {
     return cacheManager.getTransport().getMembers().stream().map(Address::toString).collect(toList());
+  }
+
+  @Override
+  public synchronized void registrationListener(RegistrationListener registrationListener) {
+    this.registrationListener = registrationListener;
   }
 
   @Override
@@ -254,7 +258,7 @@ public class InfinispanClusterManager implements ClusterManager {
       viewListener = new ClusterViewListener();
       cacheManager.addListener(viewListener);
 
-      subsCacheHelper = new SubsCacheHelper(vertx, cacheManager, nodeSelector);
+      subsCacheHelper = new SubsCacheHelper(vertx, cacheManager, registrationListener);
 
       nodeInfoCache = cacheManager.<String, byte[]>getCache("__vertx.nodeInfo").getAdvancedCache();
 
