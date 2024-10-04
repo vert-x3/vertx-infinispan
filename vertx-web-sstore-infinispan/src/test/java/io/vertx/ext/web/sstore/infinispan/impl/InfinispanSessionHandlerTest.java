@@ -18,7 +18,7 @@ package io.vertx.ext.web.sstore.infinispan.impl;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.handler.SessionHandlerTestBase;
+import io.vertx.ext.web.tests.handler.SessionHandlerTestBase;
 import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
 import org.junit.ClassRule;
 import org.testcontainers.containers.BindMode;
