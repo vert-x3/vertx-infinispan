@@ -21,11 +21,11 @@ import io.vertx.LoggingTestWatcher;
 import io.vertx.core.*;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
+import io.vertx.ext.web.it.sstore.ClusteredSessionHandlerTest;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
