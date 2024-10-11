@@ -277,6 +277,7 @@ element of the configuration. For example:
 
 Alternatively, if you want to stick with the bundled `jgroups.xml` file, you can set the `jgroups.bind.address` system property:
 
+[source,shell]
 ----
 -Djgroups.bind.address=192.168.1.20
 ----
@@ -284,6 +285,7 @@ Alternatively, if you want to stick with the bundled `jgroups.xml` file, you can
 When running Vert.x is in clustered mode, you should also make sure that Vert.x knows about the correct interface.
 When running at the command line this is done by specifying the `cluster-host` option:
 
+[source,shell]
 ----
 vertx run myverticle.js -cluster -cluster-host your-ip-address
 ----
@@ -311,6 +313,7 @@ For more information on available JGroups discovery protocols and how to configu
 
 If you have troubles configuring an IPv6 host, force the use of IPv4 with the `java.net.preferIPv4Stack` system property.
 
+[source,shell]
 ----
 -Djava.net.preferIPv4Stack=true
 ----
@@ -322,6 +325,7 @@ to see if it's forming a cluster properly. You can do this (when using the defau
 called `vertx-default-jul-logging.properties` on your classpath. This is a standard java.util.logging (JUL)
 configuration file. Inside it set:
 
+[source,properties]
 ----
 org.infinispan.level=INFO
 org.jgroups.level=INFO
@@ -329,6 +333,7 @@ org.jgroups.level=INFO
 
 and also
 
+[source,properties]
 ----
 java.util.logging.ConsoleHandler.level=INFO
 java.util.logging.FileHandler.level=INFO
@@ -343,6 +348,7 @@ Add the logging JARs of you choice to the classpath and JBoss Logging will pick 
 If you have multiple logging backends on your classpath, you can force selection with the `org.jboss.logging.provider` system property.
 For exeample:
 
+[source,shell]
 ----
 -Dorg.jboss.logging.provider=log4j2
 ----
