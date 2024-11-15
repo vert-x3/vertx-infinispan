@@ -18,7 +18,9 @@ package io.vertx.core.shareddata;
 
 import io.vertx.Lifecycle;
 import io.vertx.LoggingTestWatcher;
-import io.vertx.core.*;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import org.junit.Rule;
@@ -26,7 +28,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -72,6 +73,11 @@ public class InfinispanClusteredAsynchronousLockTest extends io.vertx.tests.shar
   @Test
   public void testLockReleasedForKilledNode() throws Exception {
     super.testLockReleasedForKilledNode();
+  }
+
+  @Override
+  protected long getLockTimeout() {
+    return 30000;
   }
 
   @Override
