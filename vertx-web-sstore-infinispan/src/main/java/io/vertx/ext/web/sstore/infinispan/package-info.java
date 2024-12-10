@@ -14,7 +14,7 @@
  * under the License.
  */
 
-@ModuleGen(name = "vertx-web-sstore-infinispan", groupPackage = "io.vertx", useFutures = true)
+@ModuleGen(name = "vertx-web-sstore-infinispan", groupPackage = "io.vertx")
 package io.vertx.ext.web.sstore.infinispan;
 
 import io.vertx.codegen.annotations.ModuleGen;

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-@ModuleGen(name = "vertx-infinispan", groupPackage = "io.vertx", useFutures = true)
+@ModuleGen(name = "vertx-infinispan", groupPackage = "io.vertx")
 package io.vertx.ext.cluster.infinispan;
 
 import io.vertx.codegen.annotations.ModuleGen;
