@@ -46,7 +46,7 @@ public class Lifecycle {
     for (Vertx vertx : clustered) {
       VertxInternal vertxInternal = (VertxInternal) vertx;
 
-      InfinispanClusterManager clusterManager = getInfinispanClusterManager(vertxInternal.getClusterManager());
+      InfinispanClusterManager clusterManager = getInfinispanClusterManager(vertxInternal.clusterManager());
 
       ComponentStatus status = null;
       if (clusterManager != null) {

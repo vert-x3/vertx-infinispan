@@ -48,7 +48,7 @@ public class ClusterHealthCheckImpl implements ClusterHealthCheck {
   @Override
   public void handle(Promise<Status> promise) {
     VertxInternal vertxInternal = (VertxInternal) vertx;
-    InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.getClusterManager();
+    InfinispanClusterManager clusterManager = (InfinispanClusterManager) vertxInternal.clusterManager();
     EmbeddedCacheManager cacheManager = (EmbeddedCacheManager) clusterManager.getCacheContainer();
     Health health = cacheManager.getHealth();
     HealthStatus healthStatus = health.getClusterHealth().getHealthStatus();

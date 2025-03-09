@@ -34,8 +34,8 @@ public class ServiceProviderTest {
     CompletableFuture<Void> result = new CompletableFuture<>();
     Vertx v1 = Vertx.clusteredVertx(new VertxOptions()).toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
     Vertx v2 = Vertx.clusteredVertx(new VertxOptions()).toCompletionStage().toCompletableFuture().get(30, TimeUnit.SECONDS);
-    assertTrue(((VertxInternal) v1).getClusterManager() instanceof InfinispanClusterManager);
-    assertTrue(((VertxInternal) v2).getClusterManager() instanceof InfinispanClusterManager);
+    assertTrue(((VertxInternal) v1).clusterManager() instanceof InfinispanClusterManager);
+    assertTrue(((VertxInternal) v2).clusterManager() instanceof InfinispanClusterManager);
     v1.eventBus().consumer("the-address", msg -> {
       if ("ping".equals(msg.body())) {
         result.complete(null);
