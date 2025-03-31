@@ -40,6 +40,7 @@ import org.infinispan.notifications.cachelistener.filter.CacheEventFilter;
 import org.infinispan.notifications.cachelistener.filter.EventType;
 import org.infinispan.util.function.SerializablePredicate;
 
+import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -169,7 +170,7 @@ public class SubsCacheHelper {
   }
 
   @Listener(clustered = true, observation = POST, sync = false)
-  private class EntryListener {
+  public class EntryListener {
 
     public EntryListener() {
     }
@@ -190,7 +191,7 @@ public class SubsCacheHelper {
     }
   }
 
-  private static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>> {
+  public static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>>, Serializable {
 
     public EventFilter() {
     }
@@ -201,8 +202,9 @@ public class SubsCacheHelper {
     }
   }
 
-  private static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
+  public static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void>, Serializable {
 
+    public EventConverter(){}
     @Override
     public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
       return null;
