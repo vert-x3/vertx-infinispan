@@ -40,9 +40,12 @@ import org.infinispan.notifications.cachelistener.filter.CacheEventFilter;
 import org.infinispan.notifications.cachelistener.filter.EventType;
 import org.infinispan.util.function.SerializablePredicate;
 
-import java.io.Serializable;
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -59,9 +62,13 @@ public class SubsCacheHelper {
   private static final Logger log = LoggerFactory.getLogger(SubsCacheHelper.class);
 
   private final VertxInternal vertx;
+
   private final Throttling throttling;
+
   private final EmbeddedMultimapCache<String, byte[]> subsCache;
+
   private final NodeSelector nodeSelector;
+
   private final EntryListener entryListener;
 
   private final ConcurrentMap<String, Set<RegistrationInfo>> localSubs = new ConcurrentHashMap<>();
@@ -75,41 +82,41 @@ public class SubsCacheHelper {
     this.nodeSelector = nodeSelector;
     entryListener = new EntryListener();
     Set<Class<? extends Annotation>> filterAnnotations = Stream.<Class<? extends Annotation>>builder()
-      .add(CacheEntryCreated.class)
-      .add(CacheEntryModified.class)
-      .add(CacheEntryRemoved.class)
-      .build()
-      .collect(toSet());
+        .add(CacheEntryCreated.class)
+        .add(CacheEntryModified.class)
+        .add(CacheEntryRemoved.class)
+        .build()
+        .collect(toSet());
     subsCache.getCache()
-      .addFilteredListener(entryListener, new EventFilter(), new EventConverter(), filterAnnotations);
+        .addFilteredListener(entryListener, new EventFilter(), new EventConverter(), filterAnnotations);
   }
 
   public CompletableFuture<List<RegistrationInfo>> get(String address) {
     return subsCache.get(address)
-      .thenApply(remote -> {
-        List<RegistrationInfo> list;
-        int size;
-        size = remote.size();
-        Set<RegistrationInfo> local = localSubs.get(address);
-        if (local != null) {
-          synchronized (local) {
-            size += local.size();
-            if (size == 0) {
-              return Collections.emptyList();
+        .thenApply(remote -> {
+          List<RegistrationInfo> list;
+          int size;
+          size = remote.size();
+          Set<RegistrationInfo> local = localSubs.get(address);
+          if (local != null) {
+            synchronized (local) {
+              size += local.size();
+              if (size == 0) {
+                return Collections.emptyList();
+              }
+              list = new ArrayList<>(size);
+              list.addAll(local);
             }
+          } else if (size == 0) {
+            return Collections.emptyList();
+          } else {
             list = new ArrayList<>(size);
-            list.addAll(local);
           }
-        } else if (size == 0) {
-          return Collections.emptyList();
-        } else {
-          list = new ArrayList<>(size);
-        }
-        for (byte[] value : remote) {
-          list.add(DataConverter.fromCachedObject(value));
-        }
-        return list;
-      });
+          for (byte[] value : remote) {
+            list.add(DataConverter.fromCachedObject(value));
+          }
+          return list;
+        });
   }
 
   public CompletableFuture<Void> put(String address, RegistrationInfo registrationInfo) {
@@ -144,7 +151,8 @@ public class SubsCacheHelper {
   }
 
   public void removeAllForNode(String nodeId) {
-    subsCache.remove((SerializablePredicate<byte[]>) value -> nodeId.equals(DataConverter.<RegistrationInfo>fromCachedObject(value).nodeId()));
+    subsCache.remove((SerializablePredicate<byte[]>) value -> nodeId.equals(
+        DataConverter.<RegistrationInfo>fromCachedObject(value).nodeId()));
   }
 
   public void close() {
@@ -191,22 +199,22 @@ public class SubsCacheHelper {
     }
   }
 
-  public static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>>, Serializable {
-
-    public EventFilter() {
-    }
+  protected static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>> {
 
     @Override
-    public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
+    public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue,
+        Metadata newMetadata, EventType eventType) {
       return true;
     }
   }
 
-  public static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void>, Serializable {
+  protected static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
 
-    public EventConverter(){}
+    public EventConverter() {}
+
     @Override
-    public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
+    public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue,
+        Metadata newMetadata, EventType eventType) {
       return null;
     }
   }
