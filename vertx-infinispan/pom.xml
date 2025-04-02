@@ -212,9 +212,13 @@
       <artifactId>protostream</artifactId>
       <version>5.0.13.Final</version>
     </dependency>
-
     <!-- ProtoStream annotation processor -->
-    <!-- https://mvnrepository.com/artifact/org.infinispan.protostream/protostream-processor -->
+    <dependency>
+      <groupId>org.infinispan.protostream</groupId>
+      <artifactId>protostream-processor</artifactId>
+      <version>5.0.13.Final</version>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-compiler-plugin</artifactId>

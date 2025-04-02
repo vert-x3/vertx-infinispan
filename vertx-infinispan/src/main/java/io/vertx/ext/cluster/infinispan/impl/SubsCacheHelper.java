@@ -40,9 +40,12 @@ import org.infinispan.notifications.cachelistener.filter.CacheEventFilter;
 import org.infinispan.notifications.cachelistener.filter.EventType;
 import org.infinispan.util.function.SerializablePredicate;
 
-import java.io.Serializable;
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -191,22 +194,22 @@ public class SubsCacheHelper {
     }
   }
 
-  public static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>>, Serializable {
-
-    public EventFilter() {
-    }
+  protected static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>> {
 
     @Override
-    public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
+    public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue,
+        Metadata newMetadata, EventType eventType) {
       return true;
     }
   }
 
-  public static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void>, Serializable {
+  protected static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
 
-    public EventConverter(){}
+    public EventConverter() {}
+
     @Override
-    public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
+    public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue,
+        Metadata newMetadata, EventType eventType) {
       return null;
     }
   }
