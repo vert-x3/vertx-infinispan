@@ -9,7 +9,6 @@ import org.infinispan.protostream.annotations.ProtoSchema;
         EventConverterAdapter.class,
     },
     schemaFileName = "subs_cache.proto",
-    schemaFilePath = "proto/",
-    schemaPackageName = "subcache")
+    schemaFilePath = "proto/")
 public interface SubsCacheSchema extends SerializationContextInitializer {
 }
