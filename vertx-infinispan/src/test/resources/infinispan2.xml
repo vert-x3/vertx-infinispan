@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<infinispan xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="urn:infinispan:config:13.0 http://www.infinispan.org/schemas/infinispan-config-13.0.xsd"
+            xmlns="urn:infinispan:config:13.0">
+
+  <jgroups>
+    <stack name="local" extends="tcp">
+      <TCP bind_addr="127.0.0.1" bind_port="7801"/>
+      <TCPPING
+              initial_hosts="127.0.0.1[7801]"
+              port_range="10"
+              stack.combine="REPLACE"
+              stack.position="MPING"/>
+    </stack>
+  </jgroups>
+
+  <cache-container statistics="false" default-cache="distributed-cache" zero-capacity-node="false">
+    <transport stack="local"/>
+    <distributed-cache name="distributed-cache"/>
+    <distributed-cache name="__vertx.subs"/>
+    <distributed-cache name="__vertx.haInfo"/>
+    <distributed-cache name="__vertx.nodeInfo"/>
+    <distributed-cache-configuration name="__vertx.distributed.cache.configuration"/>
+  </cache-container>
+
+</infinispan>
