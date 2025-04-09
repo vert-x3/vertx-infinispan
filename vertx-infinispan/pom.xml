@@ -210,19 +210,7 @@
     <dependency>
       <groupId>org.infinispan.protostream</groupId>
       <artifactId>protostream</artifactId>
-      <version>5.0.13.Final</version>
-    </dependency>
-    <!-- ProtoStream annotation processor -->
-    <dependency>
-      <groupId>org.infinispan.protostream</groupId>
-      <artifactId>protostream-processor</artifactId>
-      <version>5.0.13.Final</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-compiler-plugin</artifactId>
-      <version>3.14.0</version>
+      <version>${infinispan.protostream}</version>
     </dependency>
   </dependencies>
 
@@ -285,20 +273,26 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
-        <configuration>
-          <annotationProcessorPaths>
-            <annotationProcessorPath>
-              <groupId>org.infinispan.protostream</groupId>
-              <artifactId>protostream-processor</artifactId>
-              <version>5.0.13.Final</version>
-            </annotationProcessorPath>
-          </annotationProcessorPaths>
-        </configuration>
-      </plugin>
+<!--      <plugin>-->
+<!--        <artifactId>maven-compiler-plugin</artifactId>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>default-compile1</id>-->
+<!--            <goals>-->
+<!--              <goal>compile</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <annotationProcessorPaths>-->
+<!--                <annotationProcessorPath >-->
+<!--                  <groupId>org.infinispan.protostream</groupId>-->
+<!--                  <artifactId>protostream-processor</artifactId>-->
+<!--                  <version>5.0.13.Final</version>-->
+<!--                </annotationProcessorPath>-->
+<!--              </annotationProcessorPaths>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
     </plugins>
   </build>
 

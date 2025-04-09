@@ -13,7 +13,9 @@
   ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
-  --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -35,6 +37,7 @@
   <properties>
     <rxjava3.version>3.0.13</rxjava3.version>
     <infinispan.version>14.0.25.Final</infinispan.version>
+    <infinispan.protostream>4.6.5.Final</infinispan.protostream>
   </properties>
 
   <dependencyManagement>
@@ -73,6 +76,11 @@
                     <groupId>io.vertx</groupId>
                     <artifactId>vertx-docgen-processor</artifactId>
                     <classifier>processor</classifier>
+                  </annotationProcessorPath>
+                  <annotationProcessorPath>
+                    <groupId>org.infinispan.protostream</groupId>
+                    <artifactId>protostream-processor</artifactId>
+                    <version>${infinispan.protostream}</version>
                   </annotationProcessorPath>
                 </annotationProcessorPaths>
                 <compilerArgs>
