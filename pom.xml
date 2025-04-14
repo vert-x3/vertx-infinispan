@@ -68,6 +68,11 @@
               <configuration>
                 <annotationProcessorPaths>
                   <annotationProcessorPath>
+                    <groupId>org.infinispan.protostream</groupId>
+                    <artifactId>protostream-processor</artifactId>
+                    <version>${infinispan.protostream}</version>
+                  </annotationProcessorPath>
+                  <annotationProcessorPath>
                     <groupId>io.vertx</groupId>
                     <artifactId>vertx-codegen</artifactId>
                     <classifier>processor</classifier>
@@ -76,11 +81,6 @@
                     <groupId>io.vertx</groupId>
                     <artifactId>vertx-docgen-processor</artifactId>
                     <classifier>processor</classifier>
-                  </annotationProcessorPath>
-                  <annotationProcessorPath>
-                    <groupId>org.infinispan.protostream</groupId>
-                    <artifactId>protostream-processor</artifactId>
-                    <version>${infinispan.protostream}</version>
                   </annotationProcessorPath>
                 </annotationProcessorPaths>
                 <compilerArgs>

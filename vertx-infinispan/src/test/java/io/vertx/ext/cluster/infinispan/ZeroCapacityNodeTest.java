@@ -21,28 +21,18 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.impl.VertxImpl;
-import io.vertx.core.impl.logging.Logger;
-import io.vertx.core.impl.logging.LoggerFactory;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.internal.logging.Logger;
+import io.vertx.core.internal.logging.LoggerFactory;
 import io.vertx.core.spi.cluster.ClusterManager;
-import io.vertx.core.spi.cluster.NodeInfo;
-import io.vertx.ext.cluster.infinispan.impl.DataConverter;
 import io.vertx.test.core.VertxTestBase;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class ZeroCapacityNodeTest extends VertxTestBase {
   private static final Logger log = LoggerFactory.getLogger(ZeroCapacityNodeTest.class);
@@ -63,7 +53,6 @@ public class ZeroCapacityNodeTest extends VertxTestBase {
     System.setProperty("jgroups.tcp.port", "7800");
 
     ClusterManager manager1 = new InfinispanClusterManager();
-    VertxOptions options1 = new VertxOptions().setClusterManager(manager1);
 
     Handler<AsyncResult<Vertx>> ar = (res) -> {
       log.info("Started for node1");
@@ -74,7 +63,7 @@ public class ZeroCapacityNodeTest extends VertxTestBase {
       }
     };
 
-    clusteredVertx(options1, ar);
+    clusteredVertx(new VertxOptions(), manager1).onComplete(ar);
 
     try {
       boolean completed = deployNode1Latch.await(60, TimeUnit.SECONDS);
@@ -109,23 +98,23 @@ public class ZeroCapacityNodeTest extends VertxTestBase {
 
   }
 
-  public static void printInfo(Vertx vertx) {
-    ClusterManager clusterManager = ((VertxImpl) vertx).getClusterManager();
-
-    Map<String, byte[]> nodeInfo = clusterManager.getSyncMap("__vertx.nodeInfo");
-    List<NodeInfo> cachedObjects = new ArrayList<>();
-
-    for (Object key : nodeInfo.keySet()) {
-      NodeInfo info = DataConverter.fromCachedObject(nodeInfo.get(key));
-      cachedObjects.add(info);
-    }
-
-    List<JsonObject> listNodes = cachedObjects.stream()
-        .map(cachedObject -> JsonObject.of("host", cachedObject.host(), "port", cachedObject.port()))
-        .collect(Collectors.toList());
-
-    System.out.println(clusterManager.getNodeId() + ": " + listNodes);
-  }
+  //  public static void printInfo(Vertx vertx) {
+  //    ClusterManager clusterManager = ((VertxImpl) vertx).clusterManager();
+  //
+  //    Map<String, byte[]> nodeInfo = clusterManager.getSyncMap("__vertx.nodeInfo");
+  //    List<NodeInfo> cachedObjects = new ArrayList<>();
+  //
+  //    for (Object key : nodeInfo.keySet()) {
+  //      NodeInfo info = DataConverter.fromCachedObject(nodeInfo.get(key));
+  //      cachedObjects.add(info);
+  //    }
+  //
+  //    List<JsonObject> listNodes = cachedObjects.stream()
+  //      .map(cachedObject -> JsonObject.of("host", cachedObject.host(), "port", cachedObject.port()))
+  //      .collect(Collectors.toList());
+  //
+  //    System.out.println(clusterManager.getNodeId() + ": " + listNodes);
+  //  }
 
   private static Process startNode(int nodeId) {
     // Create command to run each node in a new JVM process with its specific configuration
@@ -135,8 +124,8 @@ public class ZeroCapacityNodeTest extends VertxTestBase {
     System.setProperty("jgroups.tcp.port", port);
 
     ProcessBuilder processBuilder =
-        new ProcessBuilder("java", "-Dvertx.infinispan.config=" + config, "-Djgroups.tcp.port=" + port, "-cp",
-            System.getProperty("java.class.path"), "io.vertx.ext.cluster.infinispan.NodeRunner", nodeName);
+      new ProcessBuilder("java", "-Dvertx.infinispan.config=" + config, "-Djgroups.tcp.port=" + port, "-cp",
+        System.getProperty("java.class.path"), "io.vertx.ext.cluster.infinispan.NodeRunner", nodeName);
 
     // Start the process and wait for it to finish
     try {
@@ -144,7 +133,7 @@ public class ZeroCapacityNodeTest extends VertxTestBase {
       // Inside startNode(), within the threads:
       new Thread(() -> {
         try (InputStream inputStream = process.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+          BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
           String line;
           while ((line = reader.readLine()) != null) {
             System.out.println(line);
@@ -157,7 +146,7 @@ public class ZeroCapacityNodeTest extends VertxTestBase {
       // Similarly for the error stream...
       new Thread(() -> {
         try (InputStream inputStream = process.getErrorStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+          BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
           String line;
           while ((line = reader.readLine()) != null) {
             System.err.println(line); // Prefix helps identify source
@@ -173,5 +162,4 @@ public class ZeroCapacityNodeTest extends VertxTestBase {
     }
     return null;
   }
-
 }

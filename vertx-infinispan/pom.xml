@@ -206,10 +206,9 @@
       <version>1.3.12</version>
       <scope>test</scope>
     </dependency>
-    <!-- ProtoStream runtime -->
     <dependency>
       <groupId>org.infinispan.protostream</groupId>
-      <artifactId>protostream</artifactId>
+      <artifactId>protostream-processor</artifactId>
       <version>${infinispan.protostream}</version>
     </dependency>
   </dependencies>

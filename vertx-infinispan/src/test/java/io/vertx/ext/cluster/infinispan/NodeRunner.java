@@ -17,7 +17,6 @@
 package io.vertx.ext.cluster.infinispan;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.spi.cluster.ClusterManager;
 
@@ -29,20 +28,24 @@ public class NodeRunner {
 
     String nodeName = args[0];
     ClusterManager manager = new InfinispanClusterManager();
-    VertxOptions options = new VertxOptions().setClusterManager(manager);
 
-    Vertx.clusteredVertx(options).onComplete(res -> {
+    Vertx.builder().withClusterManager(manager).buildClustered().onComplete(res -> {
       if (res.succeeded()) {
         Vertx vertx = res.result();
-        vertx.eventBus().<String>consumer(nodeName).handler((Message<String> msg) -> {
-          msg.reply("response from " + nodeName);
-        }).completionHandler(ar -> {
-          // System.out.println("Sending message...from " + nodeName);
-          vertx.setPeriodic(2000, (v) -> vertx.eventBus().send("node1", "msg from " + nodeName));
-          Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            vertx.close();
-          }));
+        vertx.eventBus().<String>consumer(nodeName)
+          .handler((Message<String> msg) -> msg.reply("response from " + nodeName));
+
+        // Send message every 2 seconds
+        vertx.setPeriodic(2000, timerId -> {
+          vertx.eventBus().send("node1", "msg from " + nodeName);
+          System.out.println("sent msg to node1");
         });
+
+        // Handle graceful shutdown
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+          System.out.println("Shutting down " + nodeName);
+          vertx.close();
+        }));
       }
     });
   }
