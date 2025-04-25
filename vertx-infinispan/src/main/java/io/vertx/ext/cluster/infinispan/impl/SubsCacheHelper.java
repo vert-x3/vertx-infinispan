@@ -197,8 +197,7 @@ public class SubsCacheHelper {
   protected static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>> {
 
     @Override
-    public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue,
-        Metadata newMetadata, EventType eventType) {
+    public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
       return true;
     }
   }
