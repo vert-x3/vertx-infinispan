@@ -202,7 +202,7 @@ public class SubsCacheHelper {
     }
   }
 
-  protected static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
+  public static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
 
     public EventConverter() {}
 
