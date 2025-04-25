@@ -207,8 +207,7 @@ public class SubsCacheHelper {
     public EventConverter() {}
 
     @Override
-    public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue,
-        Metadata newMetadata, EventType eventType) {
+    public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
       return null;
     }
   }
