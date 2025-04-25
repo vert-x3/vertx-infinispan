@@ -323,7 +323,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   private String getHostFromTransportProtocol(String fieldName) {
-    JGroupsTransport transport = (JGroupsTransport) cacheManager.getCacheManagerConfiguration().transport().transport();
+    JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
 
     Protocol bottomProtocol = transport.getChannel().getProtocolStack().getBottomProtocol();
     try {
