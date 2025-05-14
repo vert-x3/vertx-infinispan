@@ -16,6 +16,7 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
+import io.vertx.core.Completable;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.internal.ContextInternal;
@@ -55,7 +56,7 @@ public class SubsOpSerializer implements BiConsumer<Object, Throwable> {
     return instance;
   }
 
-  public void execute(BiFunction<String, RegistrationInfo, CompletableFuture<Void>> op, String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+  public void execute(BiFunction<String, RegistrationInfo, CompletableFuture<Void>> op, String address, RegistrationInfo registrationInfo, Completable<Void> promise) {
     if (Vertx.currentContext() != context) {
       context.runOnContext(v -> execute(op, address, registrationInfo, promise));
       return;
@@ -81,7 +82,7 @@ public class SubsOpSerializer implements BiConsumer<Object, Throwable> {
     }
     Task task = tasks.remove();
     if (throwable == null) {
-      task.promise.complete();
+      task.promise.succeed();
     } else {
       task.promise.fail(throwable);
     }
@@ -95,9 +96,9 @@ public class SubsOpSerializer implements BiConsumer<Object, Throwable> {
     final BiFunction<String, RegistrationInfo, CompletableFuture<Void>> op;
     final String address;
     final RegistrationInfo registrationInfo;
-    final Promise<Void> promise;
+    final Completable<Void> promise;
 
-    Task(BiFunction<String, RegistrationInfo, CompletableFuture<Void>> op, String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+    Task(BiFunction<String, RegistrationInfo, CompletableFuture<Void>> op, String address, RegistrationInfo registrationInfo, Completable<Void> promise) {
       this.op = op;
       this.address = address;
       this.registrationInfo = registrationInfo;

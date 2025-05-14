@@ -16,6 +16,7 @@
 
 package io.vertx.ext.cluster.infinispan;
 
+import io.vertx.core.Completable;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -128,7 +129,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public <K, V> void getAsyncMap(String name, Promise<AsyncMap<K, V>> promise) {
+  public <K, V> void getAsyncMap(String name, Completable<AsyncMap<K, V>> promise) {
     vertx.<AsyncMap<K, V>>executeBlocking(() -> {
       EmbeddedCacheManagerAdmin administration = cacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE);
       Cache<byte[], byte[]> cache = administration.getOrCreateCache(name, "__vertx.distributed.cache.configuration");
@@ -142,7 +143,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getLockWithTimeout(String name, long timeout, Promise<Lock> prom) {
+  public void getLockWithTimeout(String name, long timeout, Completable<Lock> prom) {
     vertx.executeBlocking(() -> {
       PromiseInternal<Lock> promise = vertx.promise();
       if (!lockManager.isDefined(name)) {
@@ -165,7 +166,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getCounter(String name, Promise<Counter> promise) {
+  public void getCounter(String name, Completable<Counter> promise) {
     vertx.<Counter>executeBlocking(() -> {
       if (!counterManager.isDefined(name)) {
         counterManager.defineCounter(name, CounterConfiguration.builder(CounterType.UNBOUNDED_STRONG).build());
@@ -195,7 +196,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void setNodeInfo(NodeInfo nodeInfo, Promise<Void> promise) {
+  public void setNodeInfo(NodeInfo nodeInfo, Completable<Void> promise) {
     synchronized (this) {
       this.nodeInfo = nodeInfo;
     }
@@ -211,20 +212,20 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void getNodeInfo(String nodeId, Promise<NodeInfo> promise) {
+  public void getNodeInfo(String nodeId, Completable<NodeInfo> promise) {
     nodeInfoCache.getAsync(nodeId).whenComplete((nodeInfo, throwable) -> {
       if (throwable != null) {
         promise.fail(throwable);
       } else if (nodeInfo == null) {
         promise.fail("Not a member of the cluster");
       } else {
-        promise.complete(DataConverter.fromCachedObject(nodeInfo));
+        promise.succeed(DataConverter.fromCachedObject(nodeInfo));
       }
     });
   }
 
   @Override
-  public void join(Promise<Void> promise) {
+  public void join(Completable<Void> promise) {
     vertx.<Void>executeBlocking(() -> {
       if (active) {
         return null;
@@ -274,7 +275,7 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void leave(Promise<Void> promise) {
+  public void leave(Completable<Void> promise) {
     vertx.<Void>executeBlocking(() -> {
       if (!active) {
         return null;
@@ -295,19 +296,19 @@ public class InfinispanClusterManager implements ClusterManager {
   }
 
   @Override
-  public void addRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+  public void addRegistration(String address, RegistrationInfo registrationInfo, Completable<Void> promise) {
     SubsOpSerializer serializer = SubsOpSerializer.get(vertx.getOrCreateContext());
     serializer.execute(subsCacheHelper::put, address, registrationInfo, promise);
   }
 
   @Override
-  public void removeRegistration(String address, RegistrationInfo registrationInfo, Promise<Void> promise) {
+  public void removeRegistration(String address, RegistrationInfo registrationInfo, Completable<Void> promise) {
     SubsOpSerializer serializer = SubsOpSerializer.get(vertx.getOrCreateContext());
     serializer.execute(subsCacheHelper::remove, address, registrationInfo, promise);
   }
 
   @Override
-  public void getRegistrations(String address, Promise<List<RegistrationInfo>> promise) {
+  public void getRegistrations(String address, Completable<List<RegistrationInfo>> promise) {
     Future.fromCompletionStage(subsCacheHelper.get(address)).onComplete(promise);
   }
 
