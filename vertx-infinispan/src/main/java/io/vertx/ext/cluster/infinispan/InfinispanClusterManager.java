@@ -53,6 +53,7 @@ import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
+import org.infinispan.remoting.transport.Transport;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
 import org.jgroups.stack.Protocol;
 
@@ -182,7 +183,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public List<String> getNodes() {
-    return cacheManager.getTransport().getMembers().stream().map(Address::toString).collect(toList());
+    return cacheManager.getMembers().stream().map(Address::toString).collect(toList());
   }
 
   @Override
@@ -324,6 +325,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   private String getHostFromTransportProtocol(String fieldName) {
     JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
+
     Protocol bottomProtocol = transport.getChannel().getProtocolStack().getBottomProtocol();
     try {
       InetAddress external_addr = (InetAddress) bottomProtocol.getValue(fieldName);
