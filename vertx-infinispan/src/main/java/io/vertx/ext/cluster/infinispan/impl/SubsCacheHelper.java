@@ -41,7 +41,11 @@ import org.infinispan.notifications.cachelistener.filter.EventType;
 import org.infinispan.util.function.SerializablePredicate;
 
 import java.lang.annotation.Annotation;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -169,7 +173,7 @@ public class SubsCacheHelper {
   }
 
   @Listener(clustered = true, observation = POST, sync = false)
-  private class EntryListener {
+  public class EntryListener {
 
     public EntryListener() {
     }
@@ -190,10 +194,7 @@ public class SubsCacheHelper {
     }
   }
 
-  private static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>> {
-
-    public EventFilter() {
-    }
+  public static class EventFilter implements CacheEventFilter<String, Bucket<byte[]>> {
 
     @Override
     public boolean accept(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
@@ -201,7 +202,9 @@ public class SubsCacheHelper {
     }
   }
 
-  private static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
+  public static class EventConverter implements CacheEventConverter<String, Bucket<byte[]>, Void> {
+
+    public EventConverter() {}
 
     @Override
     public Void convert(String key, Bucket<byte[]> oldValue, Metadata oldMetadata, Bucket<byte[]> newValue, Metadata newMetadata, EventType eventType) {
