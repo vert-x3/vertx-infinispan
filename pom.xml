@@ -23,6 +23,7 @@
   </parent>
 
   <artifactId>vertx-infinispan-parent</artifactId>
+  <name>Vert.x Infinispan Parent</name>
   <version>4.5.16-SNAPSHOT</version>
   <packaging>pom</packaging>
 
