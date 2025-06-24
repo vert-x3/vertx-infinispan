@@ -26,6 +26,8 @@
   <version>5.0.1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
+  <name>Vert.x Infinispan Parent</name>
+
   <scm>
     <connection>scm:git:git@github.com:vert-x3/vertx-infinispan.git</connection>
     <developerConnection>scm:git:git@github.com:vert-x3/vertx-infinispan.git</developerConnection>
