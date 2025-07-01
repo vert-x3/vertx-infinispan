@@ -33,7 +33,8 @@
   </scm>
 
   <properties>
-    <rxjava3.version>3.0.13</rxjava3.version>
+    <!-- Must be the same version as in vertx-rx for dependency convergence -->
+    <rxjava3.version>3.1.10</rxjava3.version>
     <infinispan.version>14.0.25.Final</infinispan.version>
   </properties>
 
