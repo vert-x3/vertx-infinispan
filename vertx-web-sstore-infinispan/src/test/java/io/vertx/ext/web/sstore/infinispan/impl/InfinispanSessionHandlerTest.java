@@ -18,8 +18,9 @@ package io.vertx.ext.web.sstore.infinispan.impl;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.tests.handler.SessionHandlerTestBase;
 import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
+import io.vertx.ext.web.tests.handler.SessionHandlerTestBase;
+import org.infinispan.commons.util.Version;
 import org.junit.ClassRule;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
@@ -35,7 +36,7 @@ public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
 
   @ClassRule
   public static GenericContainer<?> container =
-    new GenericContainer<>("infinispan/server:13.0.10.Final")
+    new GenericContainer<>("infinispan/server:" + Version.getVersion())
       .withExposedPorts(DEFAULT_HOTROD_PORT)
       .withClasspathResourceMapping("identities.batch", "/user-config/identities.batch", BindMode.READ_ONLY)
       .withEnv("IDENTITIES_BATCH", IDENTITIES_BATCH)
