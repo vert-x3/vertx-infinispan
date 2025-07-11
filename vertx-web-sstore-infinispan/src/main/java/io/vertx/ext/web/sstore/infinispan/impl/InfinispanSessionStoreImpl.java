@@ -28,7 +28,6 @@ import io.vertx.ext.web.sstore.AbstractSession;
 import io.vertx.ext.web.sstore.SessionStore;
 import io.vertx.ext.web.sstore.impl.SharedDataSessionImpl;
 import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
-import org.infinispan.client.hotrod.DefaultTemplate;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.infinispan.client.hotrod.configuration.ClientIntelligence;
@@ -36,6 +35,7 @@ import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.infinispan.client.hotrod.configuration.SaslQop;
 import org.infinispan.client.hotrod.configuration.ServerConfigurationBuilder;
 import org.infinispan.commons.api.CacheContainerAdmin;
+import org.infinispan.commons.configuration.StringConfiguration;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -81,7 +81,7 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
     }
     String cacheName = options.getString("cacheName", DEFAULT_SESSION_MAP_NAME);
     sessions = this.remoteCacheManager.administration().withFlags(CacheContainerAdmin.AdminFlag.VOLATILE)
-      .getOrCreateCache(cacheName, DefaultTemplate.DIST_SYNC);
+      .getOrCreateCache(cacheName, new StringConfiguration("{\"distributed-cache\":{\"mode\":\"SYNC\",\"statistics\":\"true\"}}"));
     return this;
   }
 

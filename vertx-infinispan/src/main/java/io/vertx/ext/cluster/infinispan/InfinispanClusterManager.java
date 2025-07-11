@@ -18,10 +18,9 @@ package io.vertx.ext.cluster.infinispan;
 
 import io.vertx.core.Completable;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.internal.VertxInternal;
 import io.vertx.core.internal.PromiseInternal;
+import io.vertx.core.internal.VertxInternal;
 import io.vertx.core.internal.logging.Logger;
 import io.vertx.core.internal.logging.LoggerFactory;
 import io.vertx.core.shareddata.AsyncMap;
@@ -42,6 +41,7 @@ import org.infinispan.counter.EmbeddedCounterManagerFactory;
 import org.infinispan.counter.api.CounterConfiguration;
 import org.infinispan.counter.api.CounterManager;
 import org.infinispan.counter.api.CounterType;
+import org.infinispan.factories.GlobalComponentRegistry;
 import org.infinispan.lock.EmbeddedClusteredLockManagerFactory;
 import org.infinispan.lock.api.ClusteredLock;
 import org.infinispan.lock.impl.manager.EmbeddedClusteredLockManager;
@@ -53,8 +53,9 @@ import org.infinispan.notifications.cachemanagerlistener.annotation.ViewChanged;
 import org.infinispan.notifications.cachemanagerlistener.event.MergeEvent;
 import org.infinispan.notifications.cachemanagerlistener.event.ViewChangedEvent;
 import org.infinispan.remoting.transport.Address;
+import org.infinispan.remoting.transport.Transport;
 import org.infinispan.remoting.transport.jgroups.JGroupsTransport;
-import org.jgroups.stack.Protocol;
+import org.jgroups.protocols.TP;
 
 import java.net.InetAddress;
 import java.net.URL;
@@ -63,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static java.util.stream.Collectors.toList;
 
@@ -182,7 +184,7 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public List<String> getNodes() {
-    return cacheManager.getTransport().getMembers().stream().map(Address::toString).collect(toList());
+    return cacheManager.getMembers().stream().map(Address::toString).collect(toList());
   }
 
   @Override
@@ -314,25 +316,26 @@ public class InfinispanClusterManager implements ClusterManager {
 
   @Override
   public String clusterHost() {
-    return getHostFromTransportProtocol("bind_addr");
+    return getHostFromTransportProtocol(TP::getBindAddress);
   }
 
   @Override
   public String clusterPublicHost() {
-    return getHostFromTransportProtocol("external_addr");
+    return getHostFromTransportProtocol(TP::getExternalAddr);
   }
 
-  private String getHostFromTransportProtocol(String fieldName) {
-    JGroupsTransport transport = (JGroupsTransport) cacheManager.getTransport();
-    Protocol bottomProtocol = transport.getChannel().getProtocolStack().getBottomProtocol();
+  private String getHostFromTransportProtocol(Function<TP, InetAddress> addressGetter) {
     try {
-      InetAddress external_addr = (InetAddress) bottomProtocol.getValue(fieldName);
-      String str = external_addr.toString();
+      JGroupsTransport jGroupsTransport = (JGroupsTransport) GlobalComponentRegistry.componentOf(cacheManager, Transport.class);
+      TP tp = jGroupsTransport.getChannel().getProtocolStack().getTransport();
+      InetAddress inetAddress = addressGetter.apply(tp);
+      String str = inetAddress.toString();
       if (str.charAt(0) == '/') {
         return str.substring(1);
       }
       return str.substring(0, str.indexOf('/'));
-    } catch (Exception ignored) {
+    } catch (Exception e) {
+      log.debug("Failed to get host from JGroups transport protocol", e);
       return null;
     }
   }
