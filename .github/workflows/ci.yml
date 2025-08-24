@@ -31,7 +31,7 @@ jobs:
             ${{ inputs.jdk }}
           distribution: temurin
       - name: Run tests
-        run: mvn -s .github/maven-ci-settings.xml -B -DtestLogLevel=OFF test
+        run: mvn -s .github/maven-ci-settings.xml -B -DtestLogLevel=OFF test -Dtest=InfinispanDiscoveryImplClusteredTest
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
@@ -50,4 +50,4 @@ jobs:
           java-version: ${{ inputs.jdk }}
           distribution: temurin
       - name: Run tests
-        run: mvn -P ${{ inputs.profile }} -s .github/maven-ci-settings.xml -B -DtestLogLevel=OFF test
+        run: mvn -P ${{ inputs.profile }} -s .github/maven-ci-settings.xml -B -DtestLogLevel=OFF test -Dtest=InfinispanDiscoveryImplClusteredTest
