@@ -75,6 +75,11 @@
         <version>${infinispan.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.wildfly.common</groupId>
+        <artifactId>wildfly-common</artifactId>
+        <version>1.6.0.Final</version>
+      </dependency>
+      <dependency>
         <groupId>com.github.ben-manes.caffeine</groupId>
         <artifactId>caffeine</artifactId>
         <version>${caffeine.version}</version>
