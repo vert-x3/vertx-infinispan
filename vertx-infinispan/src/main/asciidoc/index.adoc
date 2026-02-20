@@ -167,6 +167,12 @@ This JGroups stack file is located in the `infinispan-core` JAR and preconfigure
 -Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml
 ----
 
+Note that since Infinispan 16, the file location is `org/infinispan/configuration/default-jgroups-kubernetes.xml`.
+[source,shell]
+----
+-Dvertx.jgroups.config=org/infinispan/configuration/default-jgroups-kubernetes.xml
+----
+
 Also, set the JGroups DNS query to find members.
 
 [source,shell]
