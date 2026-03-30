@@ -27,11 +27,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.CoreMatchers.is;
 import static org.infinispan.health.HealthStatus.HEALTHY;
 import static org.infinispan.health.HealthStatus.HEALTHY_REBALANCING;
 
@@ -86,7 +83,7 @@ public class ClusterHealthCheckTest extends VertxTestBase {
           .findAny()
           .map(jsonObject -> jsonObject.getString("status"))
           .orElseThrow(() -> new AssertionError("foo cache is missing"));
-        assertThat(fooCacheHealth, anyOf(is(HEALTHY.name()), is(HEALTHY_REBALANCING.name())));
+        assertTrue(fooCacheHealth.equals(HEALTHY.name()) || fooCacheHealth.equals(HEALTHY_REBALANCING.name()));
         testComplete();
       }));
     }));
