@@ -56,9 +56,8 @@
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.1</version>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -71,6 +70,11 @@
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>
       <version>1.21.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web-client</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

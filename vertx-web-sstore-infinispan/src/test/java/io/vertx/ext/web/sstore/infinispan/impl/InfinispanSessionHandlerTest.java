@@ -16,12 +16,17 @@
 
 package io.vertx.ext.web.sstore.infinispan.impl;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.sstore.infinispan.InfinispanSessionStore;
 import io.vertx.ext.web.tests.handler.SessionHandlerTestBase;
+import io.vertx.junit5.VertxTestContext;
 import org.infinispan.commons.util.Version;
 import org.junit.ClassRule;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
@@ -34,7 +39,6 @@ public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
   private static final String USER = "foo";
   private static final String PASS = "bar";
 
-  @ClassRule
   public static GenericContainer<?> container =
     new GenericContainer<>("infinispan/server:" + Version.getVersion())
       .withExposedPorts(DEFAULT_HOTROD_PORT)
@@ -42,9 +46,19 @@ public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
       .withEnv("IDENTITIES_BATCH", IDENTITIES_BATCH)
       .waitingFor(new LogMessageWaitStrategy().withRegEx(".*Infinispan Server.*started in.*\\s"));
 
+  @BeforeAll
+  static void beforeAll() {
+    container.start();
+  }
+
+  @AfterAll
+  static void afterAll() {
+    container.stop();
+  }
+
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
+  public void setUp(Vertx vertx, VertxTestContext testContext) throws Exception {
     JsonObject config = new JsonObject()
       .put("servers", new JsonArray().add(new JsonObject()
         .put("host", container.getHost())
@@ -53,5 +67,6 @@ public class InfinispanSessionHandlerTest extends SessionHandlerTestBase {
         .put("password", PASS)
       ));
     store = InfinispanSessionStore.create(vertx, config);
+    super.setUp(vertx, testContext);
   }
 }

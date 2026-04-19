@@ -23,8 +23,11 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.ext.web.it.sstore.ClusteredSessionHandlerTest;
 import org.junit.Rule;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.rules.TemporaryFolder;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -33,27 +36,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class InfinispanClusteredSessionHandlerTest extends ClusteredSessionHandlerTest {
 
-  @Rule
-  public LoggingTestWatcher watchman = new LoggingTestWatcher();
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir Path tempDir;
 
   @Override
   public void setUp() throws Exception {
-    System.setProperty("jgroups.file.location", temporaryFolder.newFolder().getAbsolutePath());
+    System.setProperty("jgroups.file.location", tempDir.toFile().getAbsolutePath());
     super.setUp();
-  }
-
-  @Override
-  protected Future<Vertx> clusteredVertx(VertxOptions options, ClusterManager clusterManager) {
-    Future<Vertx> ret = super.clusteredVertx(options, clusterManager);
-    try {
-      ret.await(2, TimeUnit.MINUTES);
-    } catch (Exception e) {
-      fail(e.getMessage());
-    }
-    return ret;
   }
 
   @Override
