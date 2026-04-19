@@ -25,6 +25,7 @@ import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.streams.ReadStream;
 import io.vertx.ext.cluster.infinispan.InfinispanAsyncMap;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -93,8 +94,8 @@ public class InfinispanClusteredAsyncMapTest extends io.vertx.tests.shareddata.C
   @Test
   public void testEntryStream() {
     testReadStream(InfinispanAsyncMap::entryStream, (map, entries) -> {
-      assertEquals(map.size(), entries.size());
-      assertTrue(entries.containsAll(map.entrySet()));
+      Assert.assertEquals(map.size(), entries.size());
+      Assert.assertTrue(entries.containsAll(map.entrySet()));
     });
   }
 
@@ -112,7 +113,7 @@ public class InfinispanClusteredAsyncMapTest extends io.vertx.tests.shareddata.C
       stream.endHandler(end -> {
         assertions.accept(map, items);
         long duration = NANOSECONDS.toMillis(System.nanoTime() - start);
-        assertTrue(duration >= 3 * pause);
+        Assert.assertTrue(duration >= 3 * pause);
         testComplete();
       }).exceptionHandler(t -> {
         fail(t);
