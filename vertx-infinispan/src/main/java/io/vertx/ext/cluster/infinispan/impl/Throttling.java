@@ -21,6 +21,8 @@ import io.vertx.core.internal.VertxInternal;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
 public class Throttling {
@@ -74,6 +76,8 @@ public class Throttling {
   private final VertxInternal vertx;
   private final Function<String, CompletableFuture<?>> action;
   private final ConcurrentMap<String, State> map;
+  private final ReadWriteLock stopLock = new ReentrantReadWriteLock();
+  private boolean stop;
 
   public Throttling(VertxInternal vertx, Function<String, CompletableFuture<?>> action) {
     this.vertx = vertx;
@@ -93,7 +97,14 @@ public class Throttling {
     action.apply(address).whenComplete((v, throwable) -> {
       map.computeIfPresent(address, (s, state) -> state.done());
       vertx.setTimer(20, l -> {
-        checkState(address);
+        try {
+          stopLock.readLock().lock();
+          if (!stop) {
+            checkState(address);
+          }
+        } finally {
+          stopLock.readLock().unlock();
+        }
       });
     });
   }
@@ -102,6 +113,15 @@ public class Throttling {
     State curr = map.computeIfPresent(address, (s, state) -> state.next());
     if (curr == State.NEW) {
       run(address);
+    }
+  }
+
+  public void stop() {
+    try {
+      stopLock.writeLock().lock();
+      stop = true;
+    } finally {
+      stopLock.writeLock().unlock();
     }
   }
 }

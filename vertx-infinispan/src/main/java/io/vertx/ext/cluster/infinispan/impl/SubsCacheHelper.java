@@ -147,6 +147,7 @@ public class SubsCacheHelper {
   }
 
   public void close() {
+    throttling.stop();
     subsCache.getCache().removeListener(entryListener);
   }
 

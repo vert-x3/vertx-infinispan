@@ -18,7 +18,9 @@ package io.vertx.core.shareddata;
 
 import io.vertx.Lifecycle;
 import io.vertx.LoggingTestWatcher;
-import io.vertx.core.*;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.spi.cluster.ClusterManager;
@@ -33,7 +35,6 @@ import org.junit.rules.TemporaryFolder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -77,17 +78,17 @@ public class InfinispanClusteredAsyncMapTest extends io.vertx.tests.shareddata.C
   @Test
   public void testKeyStream() {
     testReadStream(InfinispanAsyncMap::keyStream, (map, keys) -> {
-      assertEquals(map.size(), keys.size());
-      assertTrue(keys.containsAll(map.keySet()));
+      Assert.assertEquals(map.size(), keys.size());
+      Assert.assertTrue(keys.containsAll(map.keySet()));
     });
   }
 
   @Test
   public void testValueStream() {
     testReadStream(InfinispanAsyncMap::valueStream, (map, values) -> {
-      assertEquals(map.size(), values.size());
-      assertTrue(values.containsAll(map.values()));
-      assertTrue(map.values().containsAll(values));
+      Assert.assertEquals(map.size(), values.size());
+      Assert.assertTrue(values.containsAll(map.values()));
+      Assert.assertTrue(map.values().containsAll(values));
     });
   }
 
@@ -124,7 +125,7 @@ public class InfinispanClusteredAsyncMapTest extends io.vertx.tests.shareddata.C
           stream.pause();
           int emitted = items.size();
           vertx.setTimer(pause, tid -> {
-            assertTrue("Items emitted during pause", emitted == items.size());
+            Assert.assertTrue("Items emitted during pause", emitted == items.size());
             stream.resume();
           });
         }
@@ -147,7 +148,7 @@ public class InfinispanClusteredAsyncMapTest extends io.vertx.tests.shareddata.C
           stream.handler(null);
           int emitted = keys.size();
           vertx.setTimer(500, tid -> {
-            assertTrue("Items emitted after close", emitted == keys.size());
+            Assert.assertTrue("Items emitted after close", emitted == keys.size());
             testComplete();
           });
         }
