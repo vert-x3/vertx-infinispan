@@ -17,19 +17,14 @@
 package io.vertx.ext.web.sstore;
 
 import io.vertx.Lifecycle;
-import io.vertx.LoggingTestWatcher;
 import io.vertx.core.*;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.ext.web.it.sstore.ClusteredSessionHandlerTest;
-import org.junit.Rule;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.rules.TemporaryFolder;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author Thomas Segismont

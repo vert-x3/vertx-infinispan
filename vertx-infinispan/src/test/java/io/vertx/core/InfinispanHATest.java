@@ -24,7 +24,6 @@ import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**

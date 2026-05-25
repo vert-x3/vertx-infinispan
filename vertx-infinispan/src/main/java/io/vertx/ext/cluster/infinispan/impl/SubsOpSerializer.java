@@ -17,7 +17,6 @@
 package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.Completable;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.internal.ContextInternal;
 import io.vertx.core.spi.cluster.RegistrationInfo;

@@ -16,14 +16,11 @@
 
 package io.vertx.ext.cluster.infinispan.impl;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.Counter;
 import org.infinispan.counter.api.SyncStrongCounter;
 
-import java.util.Objects;
 
 /**
  * @author Thomas Segismont

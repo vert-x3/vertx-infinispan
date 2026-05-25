@@ -18,7 +18,6 @@ package io.vertx.core.servicediscovery.impl;
 
 import io.vertx.LoggingTestWatcher;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
 import io.vertx.ext.cluster.infinispan.InfinispanClusterManager;
 import io.vertx.servicediscovery.ServiceDiscoveryOptions;
 import io.vertx.servicediscovery.impl.DiscoveryImpl;

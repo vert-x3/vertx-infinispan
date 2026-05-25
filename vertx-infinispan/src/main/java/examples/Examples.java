@@ -19,7 +19,6 @@ package examples;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
 import io.vertx.core.shareddata.AsyncMap;
 import io.vertx.core.spi.cluster.ClusterManager;
 import io.vertx.core.streams.ReadStream;
