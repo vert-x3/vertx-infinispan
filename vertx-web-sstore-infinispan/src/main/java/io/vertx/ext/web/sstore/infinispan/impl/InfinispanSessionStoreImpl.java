@@ -101,7 +101,7 @@ public class InfinispanSessionStoreImpl implements InfinispanSessionStore {
         .username(Objects.requireNonNull(server.getString("username"), "username is required"))
         .password(Objects.requireNonNull(server.getString("password"), "password is required"))
         .realm(server.getString("realm", "default"))
-        .saslMechanism(server.getString("saslMechanism", "DIGEST-MD5"));
+        .saslMechanism(server.getString("saslMechanism", "DIGEST-SHA-512"));
       String saslQop = server.getString("saslQop");
       if (saslQop != null) {
         builder.security().authentication()
