@@ -39,6 +39,7 @@
     <!-- Must be the same version as in vertx-web for dependency convergence -->
     <caffeine.version>3.2.1</caffeine.version>
     <infinispan.version>15.2.4.Final</infinispan.version>
+    <wildfly-common.version>1.7.0.Final</wildfly-common.version>
   </properties>
 
   <dependencyManagement>
@@ -74,11 +75,6 @@
         <groupId>org.infinispan</groupId>
         <artifactId>infinispan-client-hotrod</artifactId>
         <version>${infinispan.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.wildfly.common</groupId>
-        <artifactId>wildfly-common</artifactId>
-        <version>1.7.0.Final</version>
       </dependency>
       <dependency>
         <groupId>com.github.ben-manes.caffeine</groupId>
