@@ -59,6 +59,11 @@
       <artifactId>wildfly-common</artifactId>
       <version>${wildfly-common.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.smallrye.common</groupId>
+      <artifactId>smallrye-common-annotation</artifactId>
+      <version>${smallrye-common-annotation}</version>
+    </dependency>
 
     <dependency>
       <groupId>io.vertx</groupId>
