@@ -24,7 +24,7 @@
 
   <artifactId>vertx-infinispan-parent</artifactId>
   <name>Vert.x Infinispan Parent</name>
-  <version>4.5.34</version>
+  <version>4.5.35-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <scm>
