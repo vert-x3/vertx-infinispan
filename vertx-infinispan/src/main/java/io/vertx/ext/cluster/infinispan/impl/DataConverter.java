@@ -17,6 +17,8 @@
 package io.vertx.ext.cluster.infinispan.impl;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.shareddata.ClusterSerializable;
 
 import java.io.*;
@@ -38,6 +40,24 @@ public class DataConverter {
     } else if (o instanceof ClusterSerializable) {
       baos.write(1);
       writeClusterSerializable(baos, (ClusterSerializable) o);
+    } else if (o instanceof JsonObject) {
+      JsonObject jsonObject = (JsonObject) o;
+      baos.write(2);
+      Buffer buffer = Buffer.buffer();
+      jsonObject.writeToBuffer(buffer);
+      baos.write(buffer.getBytes(), 0, buffer.length());
+    } else if (o instanceof JsonArray) {
+      JsonArray jsonArray = (JsonArray) o;
+      baos.write(3);
+      Buffer buffer = Buffer.buffer();
+      jsonArray.writeToBuffer(buffer);
+      baos.write(buffer.getBytes(), 0, buffer.length());
+    } else if (o instanceof Buffer) {
+      Buffer buffer = (Buffer) o;
+      baos.write(4);
+      Buffer prefix = Buffer.buffer().appendInt(buffer.length());
+      baos.write(prefix.getBytes(), 0, prefix.length());
+      baos.write(buffer.getBytes(), 0, buffer.length());
     } else {
       throw new IllegalArgumentException("Cannot convert object of type: " + o.getClass());
     }
@@ -65,13 +85,31 @@ public class DataConverter {
     if (value == null) {
       return null;
     }
+    Buffer buffer;
     byte type = value[0];
-    if (type == 0) {
-      return (T) readSerializable(value);
-    } else if (type == 1) {
-      return (T) readClusterSerializable(value);
+    switch (type) {
+      case 0:
+        return (T) readSerializable(value);
+      case 1:
+        return (T) readClusterSerializable(value);
+      case 2:
+        buffer = Buffer.buffer(value);
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.readFromBuffer(1, buffer);
+        return (T) jsonObject;
+      case 3:
+        buffer = Buffer.buffer(value);
+        JsonArray jsonArray = new JsonArray();
+        jsonArray.readFromBuffer(1, buffer);
+        return (T) jsonArray;
+      case 4:
+        buffer = Buffer.buffer(value);
+        int length = buffer.getInt(0);
+        buffer = buffer.slice(4, 4 + length);
+        return (T) buffer;
+      default:
+        throw new IllegalArgumentException("Cannot convert object of type: " + type);
     }
-    throw new IllegalArgumentException("Cannot convert object of type: " + type);
   }
 
   private static Object readSerializable(byte[] value) {
